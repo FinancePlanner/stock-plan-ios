@@ -75,11 +75,11 @@ private enum StockDecoding {
 struct CreateStockEndpoint: Endpoint {
   typealias Response = StockResponse
 
-    let symbol: String
-    let shares: Int
-    let buyPrice: Double
-    let buyDate: String
-    let notes: String
+  let symbol: String
+  let shares: Double
+  let buyPrice: Double
+  let buyDate: String?
+  let notes: String?
 
   var method: HTTPMethod { .post }
   var path: String { "/stocks" }
@@ -89,10 +89,78 @@ struct CreateStockEndpoint: Endpoint {
     var params: Parameters = [:]
     params["symbol"] = symbol
     params["shares"] = shares
-      params["buyPrice"] = buyPrice
-      params["buyDate"] = buyDate
-      params["notes"] = notes
+    params["buyPrice"] = buyPrice
+    if let buyDate { params["buyDate"] = buyDate }
+    if let notes, !notes.isEmpty { params["notes"] = notes }
     return params
   }
+}
+
+struct BulkCreateStocksResponse: Codable, Equatable {
+  let created: Int
+  let failed: Int
+  let results: [BulkCreateStocksItem]
+}
+
+struct BulkCreateStocksItem: Codable, Equatable {
+  let index: Int
+  let stock: StockResponse?
+  let error: String?
+}
+
+struct BulkCreateStocksEndpoint: Endpoint {
+  typealias Response = BulkCreateStocksResponse
+  let stocks: [StockRequest]
+
+  var method: HTTPMethod { .post }
+  var path: String { "/stocks/bulk" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters {
+    // Encode array of StockRequest into JSON-compatible Parameters
+    let data = try JSONEncoder().encode(stocks)
+    let json = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
+    var params: Parameters = [:]
+    params["stocks"] = json
+    return params
+  }
+}
+
+struct GetStocksEndpoint: Endpoint {
+  typealias Response = [StockResponse]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/stocks" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct UpdateStockEndpoint: Endpoint {
+  typealias Response = StockResponse
+  let stockId: String
+  let payload: StockRequest
+
+  var method: HTTPMethod { .put }
+  var path: String { "/stocks/\(stockId)" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters {
+    let data = try JSONEncoder().encode(payload)
+    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    return json
+  }
+}
+
+struct DeleteStockEndpoint: Endpoint {
+  typealias Response = EmptyAPIResponse
+
+  let stockId: String
+
+  var method: HTTPMethod { .delete }
+  var path: String { "/stocks/\(stockId)" }
+  var decoder: JSONDecoder { StockDecoding.decoder() }
+
+  func asParameters() throws -> Parameters { [:] }
 }
 

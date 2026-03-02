@@ -1,6 +1,9 @@
 import Charts
 import SwiftUI
 import Foundation
+import Factory
+import StockPlanShared
+import Combine
 
 private enum HomeTab: Hashable {
   case dashboard
@@ -214,43 +217,104 @@ private struct DashboardTab: View {
 
 private struct PortfolioTab: View {
   @Environment(\.colorScheme) private var colorScheme
-
-  private let positions: [PortfolioPosition] = [
-    .init(symbol: "AAPL", quantity: 18, averageCost: 168.20, marketPrice: 191.70),
-    .init(symbol: "MSFT", quantity: 7, averageCost: 352.00, marketPrice: 418.30),
-    .init(symbol: "NVDA", quantity: 12, averageCost: 98.40, marketPrice: 125.60),
-    .init(symbol: "AMZN", quantity: 10, averageCost: 157.15, marketPrice: 177.10),
-  ]
+  @StateObject private var viewModel = PortfolioViewModel()
 
   var body: some View {
-    List(positions) { position in
-      VStack(alignment: .leading, spacing: 6) {
-        HStack {
-          Text(position.symbol)
-            .typography(.label, weight: .semibold)
-          Spacer()
-          Text(position.marketValue.currency)
-            .typography(.small, weight: .semibold)
-        }
+    NavigationStack {
+      Group {
+        if viewModel.isLoading {
+          ProgressView("Loading portfolio...")
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        } else if let error = viewModel.errorMessage {
+          VStack(spacing: 10) {
+            Text(error)
+              .foregroundStyle(AppTheme.Colors.danger)
+              .typography(.small)
+            Button("Retry") { Task { await viewModel.load() } }
+              .buttonStyle(.bordered)
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        } else if viewModel.stocks.isEmpty {
+          Text("No stocks yet.")
+            .foregroundStyle(.secondary)
+            .typography(.small)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        } else {
+          List(viewModel.stocks, id: \.id) { stock in
+            VStack(alignment: .leading, spacing: 6) {
+              HStack {
+                Text(stock.symbol)
+                  .typography(.label, weight: .semibold)
+                Spacer()
+                Text((stock.shares * stock.buyPrice).currency)
+                  .typography(.small, weight: .semibold)
+              }
 
-        HStack(spacing: 10) {
-          Text("Qty \(Int(position.quantity))")
-          Text("Avg \(position.averageCost.currency)")
-          Text("Now \(position.marketPrice.currency)")
-        }
-        .typography(.nano)
-        .foregroundStyle(.secondary)
+              HStack(spacing: 10) {
+                Text("Qty \(Int(stock.shares))")
+                Text("Avg \(stock.buyPrice.currency)")
+                Text("Date \(stock.buyDate)")
+              }
+              .typography(.nano)
+              .foregroundStyle(.secondary)
 
-        Text(position.unrealizedPnLString)
-          .typography(.nano, weight: .semibold)
-          .foregroundStyle(
-            position.unrealizedPnL >= 0 ? AppTheme.Colors.success : AppTheme.Colors.danger)
+              if let notes = stock.notes, !notes.isEmpty {
+                Text(notes)
+                  .typography(.nano)
+                  .foregroundStyle(.secondary)
+              }
+            }
+            .padding(.vertical, 4)
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    Task { await viewModel.delete(id: stock.id) }
+                } label: {
+                    Label("Delete", systemImage: "Trash")
+                }
+                
+                Button {
+                    viewModel.beginEdit(stock)
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(.blue)
+            }
+          }
+          .listStyle(.plain)
+        }
       }
-      .padding(.vertical, 4)
+      .sheet(isPresented: Binding<Bool>(
+        get: { viewModel.editingStock != nil },
+        set: { if !$0 { viewModel.editingStock = nil } }
+      )) {
+        if let stock = viewModel.editingStock {
+          EditStockSheet(
+            stock: stock,
+            isSaving: viewModel.isSaving,
+            onCancel: { viewModel.editingStock = nil },
+            onSave: { updated in
+              Task { await viewModel.saveEdit(updated) }
+            }
+          )
+        } else {
+          EmptyView()
+        }
+      }
+      .navigationTitle("Portfolio")
+      .background(AppTheme.Colors.pageBackground(for: colorScheme))
+      .task { await viewModel.load() }
+      .refreshable { await viewModel.load() }
     }
-    .scrollContentBackground(.hidden)
-    .background(AppTheme.Colors.pageBackground(for: colorScheme))
   }
+
+  private static let dateOnlyFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .iso8601)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = .init(secondsFromGMT: 0)
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter
+  }()
 }
 
 private struct WatchlistTab: View {
@@ -504,3 +568,130 @@ extension Double {
     return formatter.string(from: NSNumber(value: self)) ?? "$0.00"
   }
 }
+
+@MainActor
+private final class PortfolioViewModel: ObservableObject {
+  @Published var stocks: [StockResponse] = []
+  @Published var isLoading = false
+  @Published var errorMessage: String?
+
+    // edit
+    @Published var editingStock: StockResponse? = nil
+    @Published var isSaving = false
+  func load() async {
+    guard !isLoading else { return }
+    isLoading = true
+    errorMessage = nil
+    defer { isLoading = false }
+
+    do {
+      let service = Container.shared.stockService()
+      stocks = try await service.fetchPortfolio()
+    } catch {
+      errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load portfolio."
+    }
+  }
+    
+    func delete(id: String) async {
+        let old = stocks
+        
+        stocks.removeAll(where: { $0.id == id })
+        
+        do {
+            let service = Container.shared.stockService()
+            try await service.delete(id: id)
+        } catch {
+            stocks = old
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to delete stock."
+        }
+    }
+    
+    func beginEdit(_ stock: StockResponse) {
+        editingStock = stock
+    }
+    
+    func saveEdit(_ updated: StockResponse) async {
+        guard !isSaving else { return }
+        isSaving = true
+        defer { isSaving = false }
+        
+        do {
+            let service = Container.shared.stockService()
+            let saved = try await service.updateStock(updated)
+            
+            if let idx = stocks.firstIndex(where: { $0.id == saved.id}) {
+                stocks[idx] = saved
+            } else {
+                stocks.insert(saved, at: 0)
+            }
+            editingStock = nil
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update stock."
+        }
+    }
+}
+
+// Removed the Binding extension helper for String? as it is no longer used.
+
+private struct EditStockSheet: View {
+  let stock: StockResponse
+  let isSaving: Bool
+  let onCancel: () -> Void
+  let onSave: (StockResponse) -> Void
+
+  @State private var shares: Double
+  @State private var buyPrice: Double
+  @State private var notes: String
+
+  init(stock: StockResponse, isSaving: Bool, onCancel: @escaping () -> Void, onSave: @escaping (StockResponse) -> Void) {
+    self.stock = stock
+    self.isSaving = isSaving
+    self.onCancel = onCancel
+    self.onSave = onSave
+    _shares = State(initialValue: stock.shares)
+    _buyPrice = State(initialValue: stock.buyPrice)
+    _notes = State(initialValue: stock.notes ?? "")
+  }
+
+  var body: some View {
+    NavigationStack {
+      Form {
+        // Symbol is displayed but not editable here to keep API unchanged
+        HStack {
+          Text("Symbol")
+          Spacer()
+          Text(stock.symbol)
+            .foregroundStyle(.secondary)
+        }
+        TextField("Shares", value: $shares, format: .number)
+        TextField("Buy price", value: $buyPrice, format: .number)
+        TextField("Notes", text: $notes)
+      }
+      .navigationTitle("Edit Stock")
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Cancel", action: onCancel)
+        }
+        ToolbarItem(placement: .confirmationAction) {
+          Button(isSaving ? "Saving..." : "Save") {
+            // Build a new StockResponse with edited fields, preserving immutable properties
+            var updated = stock
+            // If StockResponse is a struct with let properties, rebuild via a memberwise init
+            // Attempt to use a convenience pattern: create a new instance preserving id/symbol/buyDate
+            updated = StockResponse(
+              id: stock.id,
+              symbol: stock.symbol,
+              shares: shares,
+              buyPrice: buyPrice,
+              buyDate: stock.buyDate,
+              notes: notes.isEmpty ? nil : notes
+            )
+            onSave(updated)
+          }
+          .disabled(isSaving)
+        }
+      }
+    }
+  }
+}
+

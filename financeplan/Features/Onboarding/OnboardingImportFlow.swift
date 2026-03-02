@@ -6,6 +6,8 @@
 //
 import SwiftUI
 import UniformTypeIdentifiers
+import Factory
+import StockPlanShared
 
 struct OnboardingImportFlow: View {
     @StateObject private var viewModel = OnboardingImportViewModel()
@@ -101,6 +103,7 @@ struct ManualEntry: Identifiable, Equatable {
 struct ManualImportScreen: View {
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel = ManualImportViewModel()
+    @State private var errorMessage: String?
     var headerNamespace: Namespace.ID? = nil
     
     let onBack: () -> Void
@@ -145,29 +148,27 @@ struct ManualImportScreen: View {
                 Spacer()
                 
                 Button("Continue") {
-                    onDone(viewModel.buildPositions())
-                }
-                Button("Continue") {
-                  let positions = viewModel.buildPositions()
-                  Task {
-                    do {
-                      // For each position, fire CreateStockEndpoint
-                      for pos in positions {
-                        let endpoint = CreateStockEndpoint(
-                          symbol: pos.symbol,
-                          shares: Int(pos.quantity),   // Or change endpoint to Double if needed
-                          buyPrice: pos.price,
-                          buyDate: dateFormatter.string(from: Date()), // Or collect per-row
-                          notes: "" // Or collect per-row
-                        )
-                        // Execute via your HTTP client (like AuthHTTPClient style)
-                        // let response: StockResponse = try await apiClient.call(endpoint)
-                      }
-                      onDone(positions)
-                    } catch {
-                      // Show error feedback
+                    errorMessage = nil
+                    let positions = viewModel.buildPositions()
+                    Task {
+                        do {
+                            let today = Self.dateOnlyFormatter.string(from: Date())
+                            let requests: [StockRequest] = positions.map { pos in
+                                StockRequest(
+                                    symbol: pos.symbol,
+                                    shares: pos.quantity,
+                                    buyPrice: pos.price,
+                                    buyDate: today,
+                                    notes: ""
+                                )
+                            }
+                            let service = Container.shared.stockService()
+                            _ = try await service.bulkCreate(stocks: requests)
+                            onDone(positions)
+                        } catch {
+                            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Could not import stocks. Please try again."
+                        }
                     }
-                  }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(AppTheme.Colors.tint(for: colorScheme))
@@ -197,7 +198,32 @@ struct ManualImportScreen: View {
                 }
             }
         }
+        .overlay(alignment: .top) {
+            if let errorMessage {
+                ToastBanner(message: errorMessage, style: .error)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .task(id: errorMessage) {
+            guard let current = errorMessage else { return }
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard errorMessage == current else { return }
+            withAnimation(.easeInOut(duration: 0.2)) {
+                errorMessage = nil
+            }
+        }
     }
+    
+    private static let dateOnlyFormatter: DateFormatter = {
+      let formatter = DateFormatter()
+      formatter.calendar = Calendar(identifier: .iso8601)
+      formatter.locale = Locale(identifier: "en_US_POSIX")
+      formatter.timeZone = .init(secondsFromGMT: 0)
+      formatter.dateFormat = "yyyy-MM-dd"
+      return formatter
+    }()
 }
 
 

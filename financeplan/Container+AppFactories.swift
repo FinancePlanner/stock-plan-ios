@@ -36,6 +36,10 @@ extension Container {
   var authSessionStore: Factory<AuthSessionStoring> {
     self { UserDefaultsAuthSessionStore() }.singleton
   }
+  
+  var stockService: Factory<StockServicing> {
+    self { StockService(environmentManager: self.appEnvironment(), sessionStore: self.authSessionStore()) }.singleton
+  }
 
   func reloadEnvironmentConfiguration(for _: AppEnvironment, onUpdate: @escaping () -> Void) {
     manager.reset(scope: .singleton)
