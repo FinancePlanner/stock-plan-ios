@@ -1,79 +1,92 @@
 import SwiftUI
 
 struct AppTopBar: View {
-    let username: String
-    @Environment(\.colorScheme) private var colorScheme
+  let username: String
+  @Environment(\.colorScheme) private var colorScheme
 
-    var body: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 8) {
-                // Logo circle
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.05, green: 0.40, blue: 0.95),
-                                Color(red: 0.30, green: 0.58, blue: 1.00),
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 32, height: 32)
-                    .overlay(
-                        Text("FP")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
-                    )
+  var body: some View {
+    HStack(spacing: 10) {
 
-                // App name
-                Text("FinPlanner")
-                    .typography(.label, weight: .bold)
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.Colors.navBarForeground(for: colorScheme))
-            }
-
-            Spacer()
-
-            // Username badge
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(AppTheme.Colors.tint(for: colorScheme).opacity(0.2))
-                    .frame(width: 26, height: 26)
-                    .overlay(
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
-                    )
-
-                Text(username)
-                    .typography(.nano, weight: .medium)
-                    .foregroundStyle(
-                        AppTheme.Colors.navBarForeground(for: colorScheme).opacity(0.7)
-                    )
-                    .lineLimit(1)
-            }
-        }
-        .padding(.leading, 4)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(
-            AppTheme.Colors.navBarBackground(for: colorScheme)
-                .opacity(0.95)
-                .blur(radius: 0)
-        )
-        .overlay(alignment: .bottom) {
+      // LEFT: Logo + App name (Slack-like compact cluster)
+      HStack(spacing: 8) {
+        Circle()
+          .fill(
             LinearGradient(
-                colors: [
-                    AppTheme.Colors.navBarForeground(for: colorScheme).opacity(0.10),
-                    .clear
-                ],
-                startPoint: .top,
-                endPoint: .bottom
+              colors: [
+                Color(red: 0.05, green: 0.40, blue: 0.95),
+                Color(red: 0.30, green: 0.58, blue: 1.00),
+              ],
+              startPoint: .topLeading,
+              endPoint: .bottomTrailing
             )
-            .frame(height: 1)
+          )
+          .frame(width: 30, height: 30) // slightly tighter
+          .overlay(
+            Text("FP")
+              .font(.system(size: 12, weight: .bold, design: .rounded))
+              .foregroundStyle(.white)
+          )
+
+        VStack(alignment: .leading, spacing: 1) {
+          Text("FinPlanner")
+            .typography(.label, weight: .bold)
+            .foregroundStyle(AppTheme.Colors.navBarForeground(for: colorScheme))
+            .lineLimit(1)
+
+          // Optional: tiny subtitle like Slack status/workspace
+          Text("Workspace")
+            .typography(.nano, weight: .medium)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
         }
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarBackground(AppTheme.Colors.navBarBackground(for: colorScheme), for: .navigationBar)
+      }
+
+      Spacer()
+
+      // RIGHT: Username + avatar (Slack-ish pill)
+      HStack(spacing: 8) {
+        Text(username)
+          .typography(.nano, weight: .semibold)
+          .foregroundStyle(AppTheme.Colors.navBarForeground(for: colorScheme).opacity(0.75))
+          .lineLimit(1)
+
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+          .fill(AppTheme.Colors.tint(for: colorScheme).opacity(0.18))
+          .frame(width: 30, height: 30)
+          .overlay(
+            Image(systemName: "person.fill")
+              .font(.system(size: 12, weight: .semibold))
+              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+          )
+          .overlay {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+              .strokeBorder(AppTheme.Colors.navBarForeground(for: colorScheme).opacity(0.08), lineWidth: 1)
+          }
+      }
+      .padding(.leading, 6)
     }
+    .padding(.horizontal, 14)
+    .padding(.vertical, 4)
+
+    // ✅ The “Slack feel” mostly comes from THIS background stack:
+    .background {
+      ZStack {
+        // 1) Blur whatever scrolls behind the bar
+        Rectangle().fill(.ultraThinMaterial)
+
+        // 2) Add your theme color on top (keeps your brand)
+        AppTheme.Colors.navBarBackground(for: colorScheme).opacity(0.75)
+      }
+      .ignoresSafeArea(edges: .top)
+    }
+
+    // ✅ Slack-like crisp separator instead of gradient hairline
+    .overlay(alignment: .bottom) {
+      Divider()
+        .opacity(colorScheme == .dark ? 0.35 : 0.25)
+    }
+
+    // ✅ Very subtle lift (Slack’s top bar feels “on top”)
+    .shadow(color: .black.opacity(colorScheme == .dark ? 0.25 : 0.08), radius: 10, y: 6)
+  }
 }

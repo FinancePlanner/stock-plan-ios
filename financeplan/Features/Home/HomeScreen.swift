@@ -20,54 +20,53 @@ struct HomeScreen: View {
   @State private var isMoreSheetPresented = false
 
   var body: some View {
-    VStack(spacing: 0) {
+    TabView(selection: $selectedTab) {
+      NavigationStack {
+        DashboardTab()
+          .navigationBarHidden(true)
+      }
+      .tabItem {
+        Label("Home", systemImage: "house.fill")
+      }
+      .tag(HomeTab.dashboard)
+
+      NavigationStack {
+        PortfolioTab()
+          .navigationBarHidden(true)
+      }
+      .tabItem {
+        Label("Portfolio", systemImage: "briefcase.fill")
+      }
+      .tag(HomeTab.portfolio)
+
+      NavigationStack {
+        WatchlistTab()
+          .navigationBarHidden(true)
+      }
+      .tabItem {
+        Label("Watchlist", systemImage: "star.fill")
+      }
+      .tag(HomeTab.watchlist)
+
+      Color.clear
+        .tabItem {
+          Label("More", systemImage: "ellipsis")
+        }
+        .tag(HomeTab.more)
+    }
+    .tint(AppTheme.Colors.tint(for: colorScheme))
+    .toolbarBackground(.visible, for: .tabBar)
+    .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
+    .onChange(of: selectedTab) { newValue in
+      if newValue == .more {
+        isMoreSheetPresented = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+          selectedTab = .dashboard
+        }
+      }
+    }
+    .safeAreaInset(edge: .top, spacing: 0) {
       AppTopBar(username: sessionManager.username)
-
-      TabView(selection: $selectedTab) {
-        NavigationStack {
-          DashboardTab()
-            .navigationBarHidden(true)
-        }
-        .tabItem {
-          Label("Home", systemImage: "house.fill")
-        }
-        .tag(HomeTab.dashboard)
-
-        NavigationStack {
-          PortfolioTab()
-            .navigationBarHidden(true)
-        }
-        .tabItem {
-          Label("Portfolio", systemImage: "briefcase.fill")
-        }
-        .tag(HomeTab.portfolio)
-
-        NavigationStack {
-          WatchlistTab()
-            .navigationBarHidden(true)
-        }
-        .tabItem {
-          Label("Watchlist", systemImage: "star.fill")
-        }
-        .tag(HomeTab.watchlist)
-
-        Color.clear
-          .tabItem {
-            Label("More", systemImage: "ellipsis")
-          }
-          .tag(HomeTab.more)
-      }
-      .tint(AppTheme.Colors.tint(for: colorScheme))
-      .toolbarBackground(.visible, for: .tabBar)
-      .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
-      .onChange(of: selectedTab) { newValue in
-        if newValue == .more {
-          isMoreSheetPresented = true
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            selectedTab = .dashboard
-          }
-        }
-      }
     }
     .ignoresSafeArea(.keyboard)
     .sheet(isPresented: $isMoreSheetPresented) {
@@ -575,9 +574,10 @@ private final class PortfolioViewModel: ObservableObject {
   @Published var isLoading = false
   @Published var errorMessage: String?
 
-    // edit
-    @Published var editingStock: StockResponse? = nil
-    @Published var isSaving = false
+  // edit
+  @Published var editingStock: StockResponse? = nil
+  @Published var isSaving = false
+  
   func load() async {
     guard !isLoading else { return }
     isLoading = true
@@ -591,44 +591,44 @@ private final class PortfolioViewModel: ObservableObject {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load portfolio."
     }
   }
+  
+  func delete(id: String) async {
+    let old = stocks
     
-    func delete(id: String) async {
-        let old = stocks
-        
-        stocks.removeAll(where: { $0.id == id })
-        
-        do {
-            let service = Container.shared.stockService()
-            try await service.delete(id: id)
-        } catch {
-            stocks = old
-            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to delete stock."
-        }
-    }
+    stocks.removeAll(where: { $0.id == id })
     
-    func beginEdit(_ stock: StockResponse) {
-        editingStock = stock
+    do {
+      let service = Container.shared.stockService()
+      try await service.delete(id: id)
+    } catch {
+      stocks = old
+      errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to delete stock."
     }
+  }
+  
+  func beginEdit(_ stock: StockResponse) {
+    editingStock = stock
+  }
+  
+  func saveEdit(_ updated: StockResponse) async {
+    guard !isSaving else { return }
+    isSaving = true
+    defer { isSaving = false }
     
-    func saveEdit(_ updated: StockResponse) async {
-        guard !isSaving else { return }
-        isSaving = true
-        defer { isSaving = false }
-        
-        do {
-            let service = Container.shared.stockService()
-            let saved = try await service.updateStock(updated)
-            
-            if let idx = stocks.firstIndex(where: { $0.id == saved.id}) {
-                stocks[idx] = saved
-            } else {
-                stocks.insert(saved, at: 0)
-            }
-            editingStock = nil
-        } catch {
-            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update stock."
-        }
+    do {
+      let service = Container.shared.stockService()
+      let saved = try await service.updateStock(updated)
+      
+      if let idx = stocks.firstIndex(where: { $0.id == saved.id}) {
+        stocks[idx] = saved
+      } else {
+        stocks.insert(saved, at: 0)
+      }
+      editingStock = nil
+    } catch {
+      errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update stock."
     }
+  }
 }
 
 // Removed the Binding extension helper for String? as it is no longer used.
