@@ -113,20 +113,14 @@ final class StockService: StockServicing {
   func createValuation(request: StockValuationRequest) async throws -> StockValuationRequest {
     try await performAuthenticated { client in
       let endpoint = CreateStockValuationEndpoint(symbol: request.symbol, payload: request)
-      try await client.callWithoutResponse(endpoint)
-
-      let getEndpoint = GetStockValuationEndpoint(symbol: request.symbol)
-      return try await client.call(getEndpoint)
+      return try await client.call(endpoint)
     }
   }
 
   func updateValuation(symbol: String, request: StockValuationRequest) async throws -> StockValuationRequest {
     try await performAuthenticated { client in
       let endpoint = UpdateStockValuationEndpoint(symbol: symbol, payload: request)
-      try await client.callWithoutResponse(endpoint)
-
-      let getEndpoint = GetStockValuationEndpoint(symbol: symbol)
-      return try await client.call(getEndpoint)
+      return try await client.call(endpoint)
     }
   }
 

@@ -362,7 +362,7 @@ final class StockServiceTests: XCTestCase {
     XCTAssertEqual(response, expected)
   }
 
-  func testCreateValuation_UsesBearerTokenEncodesBodyAndFetchesSavedValuation() async throws {
+  func testCreateValuation_UsesBearerTokenAndDecodesResponseBody() async throws {
     let session = SessionMock()
     let authSessionManager = AuthSessionManagerMock()
     authSessionManager.validAccessTokenResult = .success("token-123")
@@ -372,38 +372,20 @@ final class StockServiceTests: XCTestCase {
       authSessionManager: authSessionManager
     )
     let expected = makeValuationRequest()
-    var requests = 0
 
     session.handler = { request in
-      requests += 1
+      XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
+      XCTAssertEqual(request.httpMethod, "POST")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
 
-      if requests == 1 {
-        XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
-        XCTAssertEqual(request.httpMethod, "POST")
-
-        let body = try XCTUnwrap(request.httpBody)
-        let decoded = try JSONDecoder().decode(StockValuationRequest.self, from: body)
-        XCTAssertEqual(decoded, expected)
-
-        let response = try XCTUnwrap(
-          HTTPURLResponse(
-            url: try XCTUnwrap(request.url),
-            statusCode: 201,
-            httpVersion: nil,
-            headerFields: nil
-          )
-        )
-        return (#"\"Valuation created\""#.data(using: .utf8) ?? Data(), response)
-      }
-
-      XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
-      XCTAssertEqual(request.httpMethod, "GET")
+      let body = try XCTUnwrap(request.httpBody)
+      let decoded = try JSONDecoder().decode(StockValuationRequest.self, from: body)
+      XCTAssertEqual(decoded, expected)
 
       let response = try XCTUnwrap(
         HTTPURLResponse(
           url: try XCTUnwrap(request.url),
-          statusCode: 200,
+          statusCode: 201,
           httpVersion: nil,
           headerFields: nil
         )
@@ -414,10 +396,9 @@ final class StockServiceTests: XCTestCase {
     let response = try await service.createValuation(request: expected)
 
     XCTAssertEqual(response, expected)
-    XCTAssertEqual(requests, 2)
   }
 
-  func testUpdateValuation_UsesBearerTokenEncodesBodyAndFetchesSavedValuation() async throws {
+  func testUpdateValuation_UsesBearerTokenAndDecodesResponseBody() async throws {
     let session = SessionMock()
     let authSessionManager = AuthSessionManagerMock()
     authSessionManager.validAccessTokenResult = .success("token-123")
@@ -427,33 +408,15 @@ final class StockServiceTests: XCTestCase {
       authSessionManager: authSessionManager
     )
     let expected = makeValuationRequest(symbol: "AAPL")
-    var requests = 0
 
     session.handler = { request in
-      requests += 1
+      XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
+      XCTAssertEqual(request.httpMethod, "PUT")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
 
-      if requests == 1 {
-        XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
-        XCTAssertEqual(request.httpMethod, "PUT")
-
-        let body = try XCTUnwrap(request.httpBody)
-        let decoded = try JSONDecoder().decode(StockValuationRequest.self, from: body)
-        XCTAssertEqual(decoded, expected)
-
-        let response = try XCTUnwrap(
-          HTTPURLResponse(
-            url: try XCTUnwrap(request.url),
-            statusCode: 200,
-            httpVersion: nil,
-            headerFields: nil
-          )
-        )
-        return (#"\"Valuation updated\""#.data(using: .utf8) ?? Data(), response)
-      }
-
-      XCTAssertEqual(request.url?.path, "/v1/stocks/symbol/AAPL/valuation")
-      XCTAssertEqual(request.httpMethod, "GET")
+      let body = try XCTUnwrap(request.httpBody)
+      let decoded = try JSONDecoder().decode(StockValuationRequest.self, from: body)
+      XCTAssertEqual(decoded, expected)
 
       let response = try XCTUnwrap(
         HTTPURLResponse(
@@ -469,6 +432,5 @@ final class StockServiceTests: XCTestCase {
     let response = try await service.updateValuation(symbol: "AAPL", request: expected)
 
     XCTAssertEqual(response, expected)
-    XCTAssertEqual(requests, 2)
   }
 }
