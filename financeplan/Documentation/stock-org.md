@@ -301,3 +301,19 @@ If the product has to choose one clear angle, it should be:
 - raw data exploration third
 
 That positioning is stronger than trying to compete as a general-purpose stock app.
+
+Valuation
+Overview
+News
+History
+Position summary
+Thesis
+Catalysts
+Risks
+Fundamentals
+Compare
+Review notes
+Alerts
+Earnings
+Peer stocks
+

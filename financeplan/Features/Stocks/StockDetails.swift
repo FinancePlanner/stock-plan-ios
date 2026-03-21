@@ -12,3 +12,4 @@ public typealias StockDetails = StockPlanShared.StockResponse
 
 public typealias StockValuationRequest = StockPlanShared.StockValuationRequest
 public typealias PriceRange = StockPlanShared.PriceRange
+public typealias StockValuationDraft = StockPlanShared.StockValuationDraft

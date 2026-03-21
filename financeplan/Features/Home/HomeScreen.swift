@@ -27,7 +27,15 @@ struct HomeScreen: View {
       TabView(selection: $selectedTab) {
         NavigationStack {
           DashboardTab()
-            .navigationBarHidden(true)
+            .compactRootNavigationChrome(
+              title: "FinPlanner",
+              isUserMenuPresented: showUserMenu,
+              onUserTap: {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                  showUserMenu = true
+                }
+              }
+            )
         }
         .tabItem {
           Label("Home", systemImage: "house.fill")
@@ -36,7 +44,15 @@ struct HomeScreen: View {
 
         NavigationStack {
           PortfolioTab()
-            .navigationBarHidden(true)
+            .compactRootNavigationChrome(
+              title: "Portfolio",
+              isUserMenuPresented: showUserMenu,
+              onUserTap: {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                  showUserMenu = true
+                }
+              }
+            )
         }
         .tabItem {
           Label("Portfolio", systemImage: "briefcase.fill")
@@ -45,7 +61,15 @@ struct HomeScreen: View {
 
         NavigationStack {
           WatchlistTab()
-            .navigationBarHidden(true)
+            .compactRootNavigationChrome(
+              title: "Watchlist",
+              isUserMenuPresented: showUserMenu,
+              onUserTap: {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                  showUserMenu = true
+                }
+              }
+            )
         }
         .tabItem {
           Label("Watchlist", systemImage: "star.fill")
@@ -105,17 +129,6 @@ struct HomeScreen: View {
         .zIndex(1)
       }
     }
-    .safeAreaInset(edge: .top, spacing: 0) {
-      AppTopBar(
-        username: sessionManager.username,
-        isUserMenuPresented: showUserMenu,
-        onUserTap: {
-          withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
-            showUserMenu = true
-          }
-        }
-      )
-    }
     .sheet(isPresented: $isMoreSheetPresented) {
       MoreSheet(onLogout: onLogout)
         .presentationDetents([.medium, .large])
@@ -135,6 +148,52 @@ struct HomeScreen: View {
     .sheet(isPresented: $isProfilePresented) {
       UserProfileView()
     }
+  }
+}
+
+private struct CompactRootNavigationChrome: ViewModifier {
+  let title: String
+  let isUserMenuPresented: Bool
+  let onUserTap: () -> Void
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  func body(content: Content) -> some View {
+    content
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          Text(title)
+            .typography(.label, weight: .bold)
+            .foregroundStyle(AppTheme.Colors.navBarForeground(for: colorScheme))
+            .lineLimit(1)
+        }
+
+        ToolbarItem(placement: .topBarTrailing) {
+          AppTopBarProfileButton(
+            isUserMenuPresented: isUserMenuPresented,
+            onTap: onUserTap
+          )
+        }
+      }
+      .toolbarBackground(.visible, for: .navigationBar)
+      .toolbarBackground(AppTheme.Colors.navBarBackground(for: colorScheme), for: .navigationBar)
+    }
+}
+
+private extension View {
+  func compactRootNavigationChrome(
+    title: String,
+    isUserMenuPresented: Bool,
+    onUserTap: @escaping () -> Void
+  ) -> some View {
+    modifier(
+      CompactRootNavigationChrome(
+        title: title,
+        isUserMenuPresented: isUserMenuPresented,
+        onUserTap: onUserTap
+      )
+    )
   }
 }
 

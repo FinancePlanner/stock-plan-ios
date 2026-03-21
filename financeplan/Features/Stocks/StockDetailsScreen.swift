@@ -148,6 +148,21 @@ struct StockDetailScreen: View {
                     }
                 }
             }
+            
+            Section("Thesis") {
+                Text("Thesis that I must add")
+                    .foregroundStyle(.secondary)
+            }
+            
+            Section("Earnings") {
+                Text("Earnings coming from an API")
+                    .foregroundStyle(.secondary)
+            }
+            
+            Section("Fundamentals") {
+                Text("Fundamentals that I must add")
+                    .foregroundStyle(.secondary)
+            }
 
             if let errorMessage = viewModel.errorMessage {
                 Section {

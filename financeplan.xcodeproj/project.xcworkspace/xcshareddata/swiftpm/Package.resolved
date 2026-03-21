@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/FinancePlanner/FinanceShared.git",
       "state" : {
-        "revision" : "36e6691c6d03175ff8792d14f22905846341c91c",
-        "version" : "0.1.6"
+        "revision" : "fdb598c6705558c6ecc8a90811afc26692c65e7e",
+        "version" : "0.2.2"
       }
     },
     {
@@ -105,8 +105,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/getsentry/sentry-cocoa.git",
       "state" : {
-        "revision" : "990135f0881e56ac6b39404de0f5b0cd0dcf2131",
-        "version" : "9.6.0"
+        "revision" : "05d3ce8332097ff0b2347231ac66476fd7d2f4d8",
+        "version" : "9.8.0"
       }
     },
     {
@@ -123,8 +123,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/benedom/SwiftyCrop",
       "state" : {
-        "revision" : "e38f174df1fb404065b6bf8740d4b7bcc9a0ce0d",
-        "version" : "2.1.0"
+        "revision" : "1550afc578eb16bd1f0433981aa91c2ee0bc22de",
+        "version" : "2.1.1"
       }
     }
   ],

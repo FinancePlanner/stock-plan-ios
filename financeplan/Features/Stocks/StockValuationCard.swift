@@ -14,7 +14,7 @@ struct StockValuationCard: View {
     let onEditTapped: () -> Void
     
     var body: some View {
-        GroupBox("Valuation") {
+        Section("Valuation") {
             VStack(alignment: .leading, spacing: 12) {
                 valuationRow(title: "Bear", range: valuation?.bearCase)
                 valuationRow(title: "Bull", range: valuation?.bullCase)
