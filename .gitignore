@@ -1,0 +1,38 @@
+# macOS
+.DS_Store
+
+# Local editor settings
+.vscode/
+
+# Local caches and build output
+.cache/
+build/
+.build/
+.swiftpm/
+.SourcePackages/
+SourcePackages/
+
+# Xcode user-specific data
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Derived data
+DerivedData/
+.DerivedData/
+
+# Swift / package manager lock noise
+.package.resolved
+
+# Archives and symbol output
+*.ipa
+*.dSYM
+*.dSYM.zip
+
+# Local environment files
+.env
+.env.*
+*.local

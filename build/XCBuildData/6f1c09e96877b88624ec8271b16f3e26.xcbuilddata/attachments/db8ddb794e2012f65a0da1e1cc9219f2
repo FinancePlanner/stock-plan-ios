@@ -1,4 +1,0 @@
-module StockPlanShared {
-header "StockPlanShared-Swift.h"
-export *
-}
