@@ -286,6 +286,20 @@ private struct SettingsDetailView: View {
           .foregroundStyle(.secondary)
       }
 
+      Section("Integrations") {
+        LabeledContent {
+           Text("Soon")
+               .typography(.caption, weight: .bold)
+               .foregroundStyle(.white)
+               .padding(.horizontal, 6)
+               .padding(.vertical, 2)
+               .background(Color.indigo, in: Capsule())
+        } label: {
+           Label("Claude, ChatGPT, Grok", systemImage: "sparkles")
+               .foregroundStyle(.primary)
+        }
+      }
+
       Section("Privacy") {
         LabeledContent("Data handling", value: "Local-first planning UI")
         LabeledContent("Sensitive actions", value: "Biometric-friendly")

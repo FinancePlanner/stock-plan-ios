@@ -279,7 +279,7 @@ struct StockEarningsTab: View {
         LazyVStack(spacing: 16) {
             // to fill from endpoint later
             ResearchPlaceholderCard(
-                title: "Upcoming earnings",
+                title: "Upcoming earnings (Soon)",
                 bodyText: "Wire the earnings endpoint here for next report date, consensus estimates, prior-quarter result, and surprise tracking for \(symbol)."
             )
 
