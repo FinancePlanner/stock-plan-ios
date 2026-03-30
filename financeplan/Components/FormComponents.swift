@@ -70,18 +70,7 @@ struct FormCard<Content: View>: View {
       VStack(spacing: 0) {
         content()
       }
-      .background(
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-          .fill(AppTheme.Colors.cardBackground(for: colorScheme))
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-          .stroke(
-            AppTheme.Colors.separator(for: colorScheme)
-              .opacity(colorScheme == .dark ? 0.25 : 0.12),
-            lineWidth: 0.8
-          )
-      )
+      .appGlassEffect(.rect(cornerRadius: 16))
       .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
   }
@@ -262,11 +251,8 @@ struct FormActionBar: View {
       }
       .padding(.horizontal, 20)
       .padding(.vertical, 14)
-      .background(
-        AppTheme.Colors.cardBackground(for: colorScheme)
-          .opacity(0.95)
-          .ignoresSafeArea(edges: .bottom)
-      )
+      .appGlassEffect(.rect(cornerRadius: 0))
+      .ignoresSafeArea(edges: .bottom)
     }
   }
 }
@@ -292,10 +278,7 @@ struct FormInfoTag: View {
     .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
     .padding(.horizontal, 14)
     .padding(.vertical, 8)
-    .background(
-      Capsule()
-        .fill(AppTheme.Colors.tintSoft(for: colorScheme))
-    )
+    .appGlassEffect(.capsule, tint: AppTheme.Colors.tintSoft(for: colorScheme))
   }
 }
 
@@ -315,9 +298,6 @@ struct FormErrorBanner: View {
     }
     .padding(14)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
-        .fill(AppTheme.Colors.danger.opacity(0.08))
-    )
+    .appGlassEffect(.rect(cornerRadius: 12), tint: AppTheme.Colors.danger.opacity(0.08))
   }
 }

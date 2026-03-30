@@ -57,15 +57,7 @@ struct ToastBanner: View {
     }
     .padding(.horizontal, 14)
     .padding(.vertical, 10)
-    .background(
-      Capsule()
-        .fill(style.background)
-    )
-    .overlay(
-      Capsule()
-        .stroke(style.foreground.opacity(0.35), lineWidth: 1)
-    )
-    .shadow(color: .black.opacity(0.10), radius: 10, y: 3)
+    .appGlassEffect(.capsule, tint: style.background)
     .accessibilityElement(children: .combine)
     .accessibilityLabel(Text(accessibilityAnnouncement))
     .accessibilityHint(Text("Temporary message."))

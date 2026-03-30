@@ -12,12 +12,7 @@ public struct GlowingButtonStyle: ButtonStyle {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
           .fill(AppTheme.Colors.tint(for: colorScheme))
       )
-      .shadow(
-        color: AppTheme.Colors.tint(for: colorScheme).opacity(configuration.isPressed ? 0.14 : 0.22),
-        radius: configuration.isPressed ? 6 : 10,
-        x: 0,
-        y: configuration.isPressed ? 3 : 6
-      )
+      .appGlassEffect(.rect(cornerRadius: 16))
       .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
       .animation(.easeOut(duration: 0.16), value: configuration.isPressed)
   }

@@ -607,7 +607,7 @@ private struct DashboardActionButton: View {
       .foregroundStyle(tint)
       .frame(maxWidth: .infinity)
       .padding(.vertical, 12)
-      .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+      .appGlassEffect(.rect(cornerRadius: 18), tint: tint.opacity(0.10))
     }
     .buttonStyle(.plain)
   }

@@ -29,7 +29,7 @@ struct PortfolioScreen: View {
       } else {
         ScrollView {
           VStack(spacing: 16) {
-            GlassCard {
+              GlassCard(backgroundColor: .blue.opacity(0.12)) {
               VStack(alignment: .leading, spacing: 16) {
                 Text("Portfolio value")
                   .typography(.small, weight: .semibold)
@@ -57,6 +57,7 @@ struct PortfolioScreen: View {
                 }
               }
             }
+            .foregroundStyle(.primary)
 
             if viewModel.stocks.isEmpty {
               ContentUnavailableView {
@@ -215,7 +216,7 @@ private struct PortfolioMetricPill: View {
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, 12)
     .padding(.vertical, 10)
-    .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .appGlassEffect(.rect(cornerRadius: 16), tint: tint.opacity(0.10))
   }
 }
 

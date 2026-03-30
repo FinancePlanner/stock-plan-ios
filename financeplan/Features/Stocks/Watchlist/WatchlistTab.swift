@@ -134,7 +134,7 @@ private struct WatchlistRow: View {
           .typography(.nano, weight: .semibold)
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
-          .background(.thinMaterial, in: Capsule())
+          .appGlassEffect(.capsule)
       }
 
       if let note = item.note, !note.isEmpty {

@@ -13,17 +13,7 @@ struct GlassTextFieldStyle: TextFieldStyle {
   func _body(configuration: TextField<Self._Label>) -> some View {
     configuration
       .padding(14)
-      .background(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-          .fill(AppTheme.Colors.elevatedCardBackground(for: colorScheme))
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-          .stroke(
-            AppTheme.Colors.separator(for: colorScheme).opacity(colorScheme == .dark ? 0.35 : 0.18),
-            lineWidth: 0.8
-          )
-      )
+      .appGlassEffect(.rect(cornerRadius: 14), tint: AppTheme.Colors.elevatedCardBackground(for: colorScheme))
   }
 }
 
@@ -369,18 +359,7 @@ struct LoginScreen: View {
         .opacity(viewModel.signupFieldsOpacity)
       }
     }
-    .background(
-      RoundedRectangle(cornerRadius: 16, style: .continuous)
-        .fill(AppTheme.Colors.cardBackground(for: colorScheme))
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: 16, style: .continuous)
-        .stroke(
-          AppTheme.Colors.separator(for: colorScheme)
-            .opacity(colorScheme == .dark ? 0.25 : 0.12),
-          lineWidth: 0.8
-        )
-    )
+    .appGlassEffect(.rect(cornerRadius: 16))
     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
   }
 
@@ -461,10 +440,7 @@ struct LoginScreen: View {
       .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
       .padding(.vertical, 10)
       .padding(.horizontal, 20)
-      .background(
-        Capsule()
-          .stroke(AppTheme.Colors.tint(for: colorScheme).opacity(0.3), lineWidth: 1)
-      )
+      .appGlassEffect(.capsule)
     }
   }
 
@@ -631,10 +607,7 @@ private struct ForgotPasswordSheet: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-              RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(AppTheme.Colors.success.opacity(0.08))
-            )
+            .appGlassEffect(.rect(cornerRadius: 12), tint: AppTheme.Colors.success.opacity(0.08))
           }
 
           if let errorMessage {

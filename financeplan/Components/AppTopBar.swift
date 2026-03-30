@@ -58,12 +58,8 @@ struct AppTopBar: View {
     .padding(.horizontal, 16)
     .padding(.top, 8)
     .padding(.bottom, 12)
-    .background {
-      Rectangle()
-        .fill(AppTheme.Colors.navBarBackground(for: colorScheme).opacity(0.88))
-        .background(.ultraThinMaterial)
-        .ignoresSafeArea(edges: .top)
-    }
+    .appGlassEffect(.rect(cornerRadius: 0))
+    .ignoresSafeArea(edges: .top)
     .overlay(alignment: .bottom) {
       Divider()
         .opacity(0.12)
@@ -106,10 +102,7 @@ private struct AppTopBarSearchField: View {
     }
     .padding(.horizontal, 12)
     .padding(.vertical, 10)
-    .background(
-      RoundedRectangle(cornerRadius: 14, style: .continuous)
-        .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
-    )
+    .appGlassEffect(.rect(cornerRadius: 14), tint: AppTheme.Colors.tertiaryFill(for: colorScheme))
   }
 }
 
@@ -133,13 +126,7 @@ struct AppTopBarProfileButton: View {
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
         )
-        .overlay {
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .strokeBorder(
-              AppTheme.Colors.navBarForeground(for: colorScheme).opacity(0.08),
-              lineWidth: 1
-            )
-        }
+        .appGlassEffect(.rect(cornerRadius: 8))
     }
     .buttonStyle(.plain)
   }

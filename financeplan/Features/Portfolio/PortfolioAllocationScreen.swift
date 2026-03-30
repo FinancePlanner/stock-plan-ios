@@ -72,7 +72,7 @@ struct PortfolioAllocationScreen: View {
     } else {
       ScrollView {
         VStack(spacing: 20) {
-          GlassCard {
+            GlassCard(backgroundColor: .blue.opacity(0.12)) {
             VStack(alignment: .leading, spacing: 12) {
               Text("By cost basis")
                 .typography(.small, weight: .semibold)
@@ -240,10 +240,7 @@ private struct PortfolioAllocationShareCard: View {
     }
     .padding(28)
     .frame(width: 360)
-    .background(
-      RoundedRectangle(cornerRadius: 24, style: .continuous)
-        .fill(AppTheme.Colors.cardBackground(for: colorScheme))
-    )
+    .appGlassEffect(.rect(cornerRadius: 24))
   }
 }
 

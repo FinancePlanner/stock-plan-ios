@@ -161,10 +161,7 @@ struct ManualImportScreen: View {
           }
           .padding(14)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-              .fill(AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.4))
-          )
+          .appGlassEffect(.rect(cornerRadius: 14), tint: AppTheme.Colors.tintSoft(for: colorScheme).opacity(0.4))
           .padding(.horizontal, 20)
           .padding(.top, 16)
 
@@ -257,11 +254,8 @@ struct ManualImportScreen: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-        .background(
-          AppTheme.Colors.cardBackground(for: colorScheme)
-            .opacity(0.95)
-            .ignoresSafeArea(edges: .bottom)
-        )
+        .appGlassEffect(.rect(cornerRadius: 0))
+        .ignoresSafeArea(edges: .bottom)
       }
     }
     .background(MeshGradientBackground().ignoresSafeArea())
@@ -410,22 +404,8 @@ private struct ManualEntryCard: View {
           .opacity(0.6)
       )
     }
-    .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .fill(AppTheme.Colors.cardBackground(for: colorScheme))
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .stroke(
-          AppTheme.Colors.separator(for: colorScheme).opacity(colorScheme == .dark ? 0.3 : 0.14),
-          lineWidth: 0.8
-        )
-    )
+    .appGlassEffect(.rect(cornerRadius: 18))
     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-    .shadow(
-      color: Color.black.opacity(colorScheme == .dark ? 0.14 : 0.04),
-      radius: 8, x: 0, y: 4
-    )
   }
 }
 
@@ -489,17 +469,7 @@ struct CSVImportScreen: View {
             }
             .padding(.vertical, 28)
             .frame(maxWidth: .infinity)
-            .background(
-              RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(AppTheme.Colors.cardBackground(for: colorScheme))
-            )
-            .overlay(
-              RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(
-                  AppTheme.Colors.secondaryTint(for: colorScheme).opacity(0.3),
-                  style: StrokeStyle(lineWidth: 1.5, dash: [10, 6])
-                )
-            )
+            .appGlassEffect(.rect(cornerRadius: 20))
           }
           .buttonStyle(PressEffectStyle())
           .padding(.horizontal, 20)
@@ -554,18 +524,7 @@ struct CSVImportScreen: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background(
-                  RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(AppTheme.Colors.cardBackground(for: colorScheme))
-                )
-                .overlay(
-                  RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(
-                      AppTheme.Colors.separator(for: colorScheme)
-                        .opacity(colorScheme == .dark ? 0.25 : 0.12),
-                      lineWidth: 0.8
-                    )
-                )
+                .appGlassEffect(.rect(cornerRadius: 14))
               }
             }
             .padding(.horizontal, 20)
@@ -626,11 +585,8 @@ struct CSVImportScreen: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
-        .background(
-          AppTheme.Colors.cardBackground(for: colorScheme)
-            .opacity(0.95)
-            .ignoresSafeArea(edges: .bottom)
-        )
+        .appGlassEffect(.rect(cornerRadius: 0))
+        .ignoresSafeArea(edges: .bottom)
       }
     }
     .background(MeshGradientBackground().ignoresSafeArea())
@@ -698,11 +654,8 @@ struct OnboardingNavBar: View {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
-    .background(
-      AppTheme.Colors.topBarBackground(for: colorScheme)
-        .opacity(0.85)
-        .ignoresSafeArea(edges: .top)
-    )
+    .appGlassEffect(.rect(cornerRadius: 0))
+    .ignoresSafeArea(edges: .top)
     .overlay(alignment: .bottom) {
       Divider().opacity(0.2)
     }

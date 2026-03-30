@@ -348,28 +348,11 @@ private struct ImportMethodCard: View {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 14)
-    .background(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .fill(
-          isSelected
-            ? AppTheme.Colors.tintSoft(for: colorScheme).opacity(colorScheme == .dark ? 0.55 : 0.45)
-            : AppTheme.Colors.cardBackground(for: colorScheme)
-        )
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: 18, style: .continuous)
-        .stroke(
-          isSelected
-            ? AppTheme.Colors.tint(for: colorScheme).opacity(0.5)
-            : AppTheme.Colors.separator(for: colorScheme).opacity(colorScheme == .dark ? 0.28 : 0.14),
-          lineWidth: isSelected ? 1.5 : 0.8
-        )
-    )
-    .shadow(
-      color: isSelected
-        ? AppTheme.Colors.tint(for: colorScheme).opacity(0.12)
-        : Color.black.opacity(colorScheme == .dark ? 0.10 : 0.03),
-      radius: isSelected ? 12 : 6, x: 0, y: isSelected ? 6 : 3
+    .appGlassEffect(
+      .rect(cornerRadius: 18),
+      tint: isSelected
+        ? AppTheme.Colors.tintSoft(for: colorScheme).opacity(colorScheme == .dark ? 0.55 : 0.45)
+        : nil
     )
     .animation(.easeInOut(duration: 0.2), value: isSelected)
   }

@@ -116,13 +116,7 @@ struct UserMenuDrawer: View {
     }
     .frame(maxWidth: .infinity)
     .frame(height: height, alignment: .top)
-    .background(.regularMaterial)
-    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-    .overlay {
-      RoundedRectangle(cornerRadius: 24, style: .continuous)
-        .strokeBorder(.white.opacity(colorScheme == .dark ? 0.10 : 0.18), lineWidth: 1)
-    }
-    .shadow(color: .black.opacity(colorScheme == .dark ? 0.35 : 0.12), radius: 20, y: 10)
+    .appGlassEffect(.rect(cornerRadius: 24))
     .padding(.horizontal, 10)
     .padding(.bottom, 10)
     .frame(maxHeight: .infinity, alignment: .bottom)
@@ -166,10 +160,7 @@ struct UserMenuDrawer: View {
       }
       .padding(.horizontal, 12)
       .padding(.vertical, 12)
-      .background(
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-          .fill(.secondary.opacity(colorScheme == .dark ? 0.16 : 0.10))
-      )
+      .appGlassEffect(.rect(cornerRadius: 16), tint: .secondary.opacity(colorScheme == .dark ? 0.16 : 0.10))
     }
     .buttonStyle(.plain)
   }
