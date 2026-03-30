@@ -2,8 +2,11 @@ import Foundation
 
 enum StockDetailTab: String, CaseIterable, Identifiable {
     case overview
-    case projections
+    case analysis
+    case forecast
     case compare
+    case news
+    case earnings
 
     var id: String { rawValue }
 
@@ -11,10 +14,16 @@ enum StockDetailTab: String, CaseIterable, Identifiable {
         switch self {
         case .overview:
             "Overview"
-        case .projections:
-            "Projections"
+        case .analysis:
+            "Analysis"
+        case .forecast:
+            "Forecast"
         case .compare:
             "Compare"
+        case .news:
+            "News"
+        case .earnings:
+            "Earnings"
         }
     }
 }
@@ -243,6 +252,91 @@ struct StockProjectionScenario: Equatable {
     let marketCap: Double
     let sharesOutstanding: Double
     let years: [StockProjectionYear]
+}
+
+struct StockMarketSnapshot: Decodable, Equatable {
+    let currentPrice: Double
+    let change: Double
+    let percentChange: Double
+    let high: Double
+    let low: Double
+    let open: Double
+    let previousClose: Double
+    let timestamp: TimeInterval
+
+    enum CodingKeys: String, CodingKey {
+        case currentPrice = "c"
+        case change = "d"
+        case percentChange = "dp"
+        case high = "h"
+        case low = "l"
+        case open = "o"
+        case previousClose = "pc"
+        case timestamp = "t"
+    }
+
+    init(
+        currentPrice: Double,
+        change: Double? = nil,
+        percentChange: Double? = nil,
+        high: Double,
+        low: Double,
+        open: Double,
+        previousClose: Double,
+        timestamp: TimeInterval
+    ) {
+        let resolvedChange = change ?? (currentPrice - previousClose)
+        let resolvedPercentChange: Double
+        if let percentChange {
+            resolvedPercentChange = percentChange / 100
+        } else if previousClose == 0 {
+            resolvedPercentChange = 0
+        } else {
+            resolvedPercentChange = resolvedChange / previousClose
+        }
+
+        self.currentPrice = currentPrice
+        self.change = resolvedChange
+        self.percentChange = resolvedPercentChange
+        self.high = high
+        self.low = low
+        self.open = open
+        self.previousClose = previousClose
+        self.timestamp = timestamp
+    }
+
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let currentPrice = try container.decode(Double.self, forKey: .currentPrice)
+        let high = try container.decode(Double.self, forKey: .high)
+        let low = try container.decode(Double.self, forKey: .low)
+        let open = try container.decode(Double.self, forKey: .open)
+        let previousClose = try container.decode(Double.self, forKey: .previousClose)
+        let timestamp = try container.decode(TimeInterval.self, forKey: .timestamp)
+        let change = try container.decodeIfPresent(Double.self, forKey: .change)
+        let percentChange = try container.decodeIfPresent(Double.self, forKey: .percentChange)
+
+        self.init(
+            currentPrice: currentPrice,
+            change: change,
+            percentChange: percentChange,
+            high: high,
+            low: low,
+            open: open,
+            previousClose: previousClose,
+            timestamp: timestamp
+        )
+    }
+
+    var isPositiveSession: Bool {
+        change >= 0
+    }
+
+    var rangeProgress: Double {
+        guard high > low else { return 0.5 }
+        let progress = (currentPrice - low) / (high - low)
+        return min(max(progress, 0), 1)
+    }
 }
 
 struct StockComparisonProfile: Identifiable, Equatable {

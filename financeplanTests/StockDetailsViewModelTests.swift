@@ -278,6 +278,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertTrue(viewModel.history.isEmpty)
     XCTAssertTrue(viewModel.news.isEmpty)
     XCTAssertNil(viewModel.valuation)
+    XCTAssertNil(viewModel.marketSnapshot)
   }
 
   func testSavePosition_UpdatesDetailsFromService() async {
@@ -321,6 +322,24 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertNotNil(viewModel.projectionScenario(.base))
     XCTAssertEqual(viewModel.projectionScenario(.base)?.years.count, 5)
     XCTAssertEqual(viewModel.projectionScenario(.base)?.years.last?.year, 2028)
+    XCTAssertNotNil(viewModel.marketSnapshot)
+    XCTAssertEqual(viewModel.marketSnapshot?.currentPrice, viewModel.primaryComparisonProfile?.currentPrice)
+  }
+
+  func testMarketSnapshot_WhenChangeFieldsMissing_ComputesChangeAndPercent() {
+    let snapshot = StockMarketSnapshot(
+      currentPrice: 261.74,
+      high: 263.31,
+      low: 260.68,
+      open: 261.07,
+      previousClose: 259.45,
+      timestamp: 1_582_641_000
+    )
+
+    XCTAssertEqual(snapshot.change, 2.29, accuracy: 0.001)
+    XCTAssertEqual(snapshot.percentChange, 2.29 / 259.45, accuracy: 0.0001)
+    XCTAssertGreaterThan(snapshot.rangeProgress, 0)
+    XCTAssertLessThan(snapshot.rangeProgress, 1)
   }
 
   func testUpdatePeerSymbol_WhenSelectingExistingPeer_SwapsVisibleColumns() async {

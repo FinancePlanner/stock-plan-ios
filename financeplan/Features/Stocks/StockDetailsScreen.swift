@@ -16,6 +16,7 @@ struct StockDetailScreen: View {
     @StateObject private var viewModel = StockDetailsViewModel()
     @State private var showEditValuation = false
     @State private var showEditPosition = false
+    @State private var showEditAnalysis = false
     @State private var selectedTab: StockDetailTab = .overview
     @State private var selectedScenario: StockProjectionScenarioKind = .base
 
@@ -105,6 +106,13 @@ struct StockDetailScreen: View {
                 return await viewModel.saveValuation(draft)
             }
         }
+        .sheet(isPresented: $showEditAnalysis) {
+            if let stock = viewModel.details {
+                EditStockAnalysisSheet(stock: stock) { analysis in
+                    await viewModel.saveAnalysis(analysis)
+                }
+            }
+        }
         .task {
             await viewModel.load(stockId: stockId)
         }
@@ -115,35 +123,40 @@ struct StockDetailScreen: View {
             VStack(spacing: 16) {
                 StockDetailHeroCard(
                     details: viewModel.details,
-                    profile: viewModel.primaryComparisonProfile
+                    profile: viewModel.primaryComparisonProfile,
+                    marketSnapshot: viewModel.marketSnapshot
                 )
 
-                Picker("Stock detail tab", selection: $selectedTab) {
-                    ForEach(StockDetailTab.allCases) { tab in
-                        Text(tab.title).tag(tab)
-                    }
-                }
-                .pickerStyle(.segmented)
+                StockDetailTabBar(selectedTab: $selectedTab)
 
                 switch selectedTab {
                 case .overview:
                     StockOverviewTab(
                         details: viewModel.details,
-                        profile: viewModel.primaryComparisonProfile,
                         valuation: viewModel.valuation,
-                        history: viewModel.history,
-                        news: viewModel.news,
+                        marketSnapshot: viewModel.marketSnapshot,
                         errorMessage: viewModel.errorMessage,
                         onEditValuation: { showEditValuation = true },
                         onEditPosition: { showEditPosition = true }
                     )
-                case .projections:
-                    StockProjectionsTab(
+                case .analysis:
+                    StockAnalysisTab(
+                        details: viewModel.details,
+                        profile: viewModel.primaryComparisonProfile,
+                        valuation: viewModel.valuation,
+                        onEditAnalysis: { showEditAnalysis = true }
+                    )
+                case .forecast:
+                    StockForecastTab(
                         profile: viewModel.primaryComparisonProfile,
                         selectedScenario: $selectedScenario
                     )
                 case .compare:
                     StockCompareTab(viewModel: viewModel)
+                case .news:
+                    StockNewsTab(news: viewModel.news)
+                case .earnings:
+                    StockEarningsTab(symbol: viewModel.details?.symbol ?? initialSymbol)
                 }
             }
             .padding(.horizontal, 16)

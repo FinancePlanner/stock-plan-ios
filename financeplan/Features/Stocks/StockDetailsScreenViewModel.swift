@@ -16,6 +16,7 @@ final class StockDetailsViewModel: ObservableObject {
     @Published var history: [StockHistory] = []
     @Published var news: [StockNews] = []
     @Published var valuation: StockValuationRequest?
+    @Published private(set) var marketSnapshot: StockMarketSnapshot?
     @Published private(set) var primaryComparisonProfile: StockComparisonProfile?
     @Published private(set) var comparisonUniverse: [StockComparisonProfile] = []
     @Published private(set) var selectedPeerSymbols: [String] = []
@@ -88,6 +89,7 @@ final class StockDetailsViewModel: ObservableObject {
             history = []
             news = []
             valuation = nil
+            marketSnapshot = nil
             primaryComparisonProfile = nil
             comparisonUniverse = []
             selectedPeerSymbols = []
@@ -153,6 +155,8 @@ final class StockDetailsViewModel: ObservableObject {
             self.details = details
             // to fill from endpoint later
             seedMockInsights(for: symbol)
+            // to fill from endpoint later
+            seedMockMarketSnapshot(for: symbol)
             self.history = await historyTask
             self.news = await newsTask
             self.valuation = await valuationTask
@@ -161,6 +165,7 @@ final class StockDetailsViewModel: ObservableObject {
             history = []
             news = []
             valuation = nil
+            marketSnapshot = nil
             primaryComparisonProfile = nil
             comparisonUniverse = []
             selectedPeerSymbols = []
@@ -234,6 +239,33 @@ final class StockDetailsViewModel: ObservableObject {
         )
     }
 
+    func saveAnalysis(_ analysis: String?) async -> String? {
+        guard let details else {
+            return "Unable to load the stock details for this analysis."
+        }
+
+        errorMessage = nil
+
+        do {
+            let saved = try await service.updateStock(
+                StockResponse(
+                    id: details.id,
+                    symbol: details.symbol,
+                    shares: details.shares,
+                    buyPrice: details.buyPrice,
+                    buyDate: details.buyDate,
+                    notes: analysis
+                )
+            )
+            self.details = saved
+            return nil
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            errorMessage = message
+            return message
+        }
+    }
+
     private func loadHistory(symbol: String) async -> [StockHistory] {
         do {
             return try await service.fetchStockHistory(symbol: symbol)
@@ -278,6 +310,37 @@ final class StockDetailsViewModel: ObservableObject {
             ?? StockInsightsMockStore.profile(for: normalizedSymbol)
         selectedPeerSymbols = []
         fillMissingPeers()
+    }
+
+    private func seedMockMarketSnapshot(for symbol: String) {
+        // to fill from endpoint later
+        let normalizedSymbol = symbol.uppercased()
+        let profile = primaryComparisonProfile ?? comparisonProfile(for: normalizedSymbol)
+
+        guard let profile else {
+            marketSnapshot = nil
+            return
+        }
+
+        let seed = Double(abs(normalizedSymbol.hashValue % 37)) / 10_000
+        let signedMove = (abs(normalizedSymbol.hashValue) % 2 == 0 ? 1 : -1) * max(0.004, seed)
+        let previousClose = profile.currentPrice / (1 + signedMove)
+        let change = profile.currentPrice - previousClose
+        let open = previousClose * (1 + signedMove * 0.32)
+        let rangeSize = max(abs(change) * 2.4, profile.currentPrice * 0.015)
+        let high = max(profile.currentPrice, open) + (rangeSize * 0.45)
+        let low = max(0.01, min(profile.currentPrice, open) - (rangeSize * 0.55))
+
+        marketSnapshot = StockMarketSnapshot(
+            currentPrice: profile.currentPrice,
+            change: change,
+            percentChange: nil,
+            high: high,
+            low: low,
+            open: open,
+            previousClose: previousClose,
+            timestamp: Date.now.timeIntervalSince1970
+        )
     }
 
     private func fillMissingPeers() {

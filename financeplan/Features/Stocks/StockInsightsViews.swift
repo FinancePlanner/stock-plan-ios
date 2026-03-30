@@ -5,12 +5,17 @@ import SwiftUI
 struct StockDetailHeroCard: View {
     let details: StockDetails?
     let profile: StockComparisonProfile?
+    let marketSnapshot: StockMarketSnapshot?
 
     @Environment(\.colorScheme) private var colorScheme
 
+    private var displayPrice: Double? {
+        marketSnapshot?.currentPrice ?? profile?.currentPrice
+    }
+
     private var positionMarketValue: Double? {
-        guard let details, let profile else { return nil }
-        return details.shares * profile.currentPrice
+        guard let details, let displayPrice else { return nil }
+        return details.shares * displayPrice
     }
 
     private var costBasis: Double? {
@@ -20,7 +25,7 @@ struct StockDetailHeroCard: View {
 
     var body: some View {
         GlassCard(cornerRadius: 28) {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top, spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(profile?.symbol ?? details?.symbol ?? "Stock")
@@ -49,20 +54,12 @@ struct StockDetailHeroCard: View {
                         )
                 }
 
-                HStack(spacing: 10) {
+                HStack(alignment: .top, spacing: 10) {
                     HeroMetricPill(
                         title: "Current price",
-                        value: profile?.currentPrice.currency ?? "Pending",
+                        value: displayPrice?.currency ?? "Pending",
                         tint: AppTheme.Colors.tint(for: colorScheme)
                     )
-                    HeroMetricPill(
-                        title: "Market cap",
-                        value: profile.map { compactCurrency($0.marketCap) } ?? "Pending",
-                        tint: AppTheme.Colors.secondaryTint(for: colorScheme)
-                    )
-                }
-
-                HStack(spacing: 10) {
                     HeroMetricPill(
                         title: "Position",
                         value: positionMarketValue?.currency ?? "Pending",
@@ -81,47 +78,32 @@ struct StockDetailHeroCard: View {
 
 struct StockOverviewTab: View {
     let details: StockDetails?
-    let profile: StockComparisonProfile?
     let valuation: StockValuationRequest?
-    let history: [StockHistory]
-    let news: [StockNews]
+    let marketSnapshot: StockMarketSnapshot?
     let errorMessage: String?
     let onEditValuation: () -> Void
     let onEditPosition: () -> Void
 
     var body: some View {
         LazyVStack(spacing: 16) {
-            StockValuationSummaryCard(
-                valuation: valuation,
-                onEditValuation: onEditValuation
-            )
-
             if let details {
                 StockPositionOverviewCard(details: details, onEditPosition: onEditPosition)
             }
 
-            if let profile {
-                StockCurrentMetricsCard(profile: profile)
+            if let marketSnapshot {
+                StockMarketSnapshotCard(snapshot: marketSnapshot)
+            } else {
+                GlassCard {
+                    Text("Market snapshot will appear after the quote endpoint is connected.")
+                        .typography(.small)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
 
-            StockHistoryCard(history: history)
-            StockNewsCard(news: news)
-
-            ResearchPlaceholderCard(
-                title: "Thesis",
-                bodyText: "Use this section for the long-form why now, key risks, and what must happen for the position to work."
-            )
-
-            // to fill from endpoint later
-            ResearchPlaceholderCard(
-                title: "Earnings",
-                bodyText: "Wire the future earnings API here for quarter dates, analyst estimates, and surprises versus expectations."
-            )
-
-            // to fill from endpoint later
-            ResearchPlaceholderCard(
-                title: "Fundamentals",
-                bodyText: "Wire the fundamentals API here for balance sheet strength, cash generation, and capital allocation signals."
+            StockValuationSummaryCard(
+                valuation: valuation,
+                onEditValuation: onEditValuation
             )
 
             if let errorMessage {
@@ -136,7 +118,30 @@ struct StockOverviewTab: View {
     }
 }
 
-struct StockProjectionsTab: View {
+struct StockAnalysisTab: View {
+    let details: StockDetails?
+    let profile: StockComparisonProfile?
+    let valuation: StockValuationRequest?
+    let onEditAnalysis: () -> Void
+
+    var body: some View {
+        LazyVStack(spacing: 16) {
+            if let profile {
+                StockCurrentMetricsCard(profile: profile)
+                StockFundamentalsCard(profile: profile)
+            }
+
+            StockThesisCard(
+                analysis: details?.notes,
+                valuationRationale: valuation?.rationale,
+                canEdit: details != nil,
+                onEdit: onEditAnalysis
+            )
+        }
+    }
+}
+
+struct StockForecastTab: View {
     let profile: StockComparisonProfile?
     @Binding var selectedScenario: StockProjectionScenarioKind
 
@@ -257,6 +262,75 @@ struct StockCompareTab: View {
     }
 }
 
+struct StockNewsTab: View {
+    let news: [StockNews]
+
+    var body: some View {
+        LazyVStack(spacing: 16) {
+            StockNewsCard(news: news)
+        }
+    }
+}
+
+struct StockEarningsTab: View {
+    let symbol: String
+
+    var body: some View {
+        LazyVStack(spacing: 16) {
+            // to fill from endpoint later
+            ResearchPlaceholderCard(
+                title: "Upcoming earnings",
+                bodyText: "Wire the earnings endpoint here for next report date, consensus estimates, prior-quarter result, and surprise tracking for \(symbol)."
+            )
+
+            // to fill from endpoint later
+            ResearchPlaceholderCard(
+                title: "Text and voice",
+                bodyText: "Wire transcript text, management commentary, and voice playback here once the earnings endpoint is available."
+            )
+        }
+    }
+}
+
+struct StockDetailTabBar: View {
+    @Binding var selectedTab: StockDetailTab
+    @Namespace private var selectionNamespace
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(StockDetailTab.allCases) { tab in
+                    Button {
+                        withAnimation(.snappy(duration: 0.22)) {
+                            selectedTab = tab
+                        }
+                    } label: {
+                        Text(tab.title)
+                            .typography(.caption, weight: .semibold)
+                            .foregroundStyle(selectedTab == tab ? .primary : .secondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background {
+                                if selectedTab == tab {
+                                    Capsule()
+                                        .fill(Color.secondary.opacity(0.12))
+                                        .matchedGeometryEffect(id: "stock-detail-tab", in: selectionNamespace)
+                                } else {
+                                    Capsule()
+                                        .fill(Color.secondary.opacity(0.06))
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(4)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Stock detail sections")
+    }
+}
+
 private struct HeroMetricPill: View {
     let title: String
     let value: String
@@ -267,9 +341,13 @@ private struct HeroMetricPill: View {
             Text(title)
                 .typography(.caption)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Text(value)
                 .typography(.small, weight: .semibold)
                 .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
@@ -360,6 +438,133 @@ private struct ProjectionScenarioHeaderCard: View {
     }
 }
 
+private struct StockMarketSnapshotCard: View {
+    let snapshot: StockMarketSnapshot
+
+    private var changeTint: Color {
+        snapshot.isPositiveSession ? AppTheme.Colors.success : AppTheme.Colors.danger
+    }
+
+    private var timestampText: String {
+        Date(timeIntervalSince1970: snapshot.timestamp)
+            .formatted(date: .omitted, time: .shortened)
+    }
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Market snapshot")
+                        .typography(.small, weight: .semibold)
+
+                    Text("Current price, session move, and today's range. Use a historical endpoint later for a real price chart.")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text(snapshot.currentPrice.currency)
+                        .typography(.hero, weight: .bold)
+                        .monospacedDigit()
+
+                    Text(signedCurrencyText(snapshot.change))
+                        .typography(.small, weight: .semibold)
+                        .monospacedDigit()
+                        .foregroundStyle(changeTint)
+
+                    Text(signedPercentText(snapshot.percentChange))
+                        .typography(.small, weight: .semibold)
+                        .foregroundStyle(changeTint)
+                        .monospacedDigit()
+                }
+
+                StockSessionRangeBar(snapshot: snapshot, tint: changeTint)
+
+                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
+                    GridRow {
+                        DetailItem(title: "Open", value: snapshot.open.currency)
+                        DetailItem(title: "Prev close", value: snapshot.previousClose.currency)
+                    }
+
+                    GridRow {
+                        DetailItem(title: "Day high", value: snapshot.high.currency)
+                        DetailItem(title: "Day low", value: snapshot.low.currency)
+                    }
+                }
+
+                Text("Updated \(timestampText)")
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+private struct StockSessionRangeBar: View {
+    let snapshot: StockMarketSnapshot
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Day range")
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(snapshot.low.currency) - \(snapshot.high.currency)")
+                    .typography(.caption, weight: .semibold)
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+            }
+
+            GeometryReader { proxy in
+                let markerX = proxy.size.width * snapshot.rangeProgress
+
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.12))
+                        .frame(height: 10)
+
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [tint.opacity(0.25), tint.opacity(0.65)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(18, markerX), height: 10)
+
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 16, height: 16)
+                        .shadow(color: Color.black.opacity(0.14), radius: 6, y: 2)
+                        .overlay(
+                            Circle()
+                                .stroke(tint, lineWidth: 3)
+                        )
+                        .offset(x: min(max(0, markerX - 8), max(0, proxy.size.width - 16)))
+                }
+            }
+            .frame(height: 18)
+
+            HStack {
+                Text("Low")
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("Current")
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("High")
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
 private struct StockCurrentMetricsCard: View {
     let profile: StockComparisonProfile
 
@@ -405,6 +610,139 @@ private struct StockCurrentMetricsCard: View {
                 }
             }
         }
+    }
+}
+
+private struct StockFundamentalsCard: View {
+    let profile: StockComparisonProfile
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Fundamentals")
+                        .typography(.small, weight: .semibold)
+
+                    Text("A compact read on growth and profitability while the dedicated fundamentals endpoint is still mocked on the client.")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+
+                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
+                    GridRow {
+                        DetailItem(
+                            title: "TTM Rev Growth",
+                            value: formattedMetricValue(.ttmRevenueGrowth, value: profile.metrics[.ttmRevenueGrowth])
+                        )
+                        DetailItem(
+                            title: "Next Yr Rev Growth",
+                            value: formattedMetricValue(.nextYearRevenueGrowth, value: profile.metrics[.nextYearRevenueGrowth])
+                        )
+                    }
+
+                    GridRow {
+                        DetailItem(
+                            title: "Gross Margin",
+                            value: formattedMetricValue(.grossMargin, value: profile.metrics[.grossMargin])
+                        )
+                        DetailItem(
+                            title: "Net Margin",
+                            value: formattedMetricValue(.netMargin, value: profile.metrics[.netMargin])
+                        )
+                    }
+
+                    GridRow {
+                        DetailItem(
+                            title: "TTM EPS Growth",
+                            value: formattedMetricValue(.ttmEPSGrowth, value: profile.metrics[.ttmEPSGrowth])
+                        )
+                        DetailItem(
+                            title: "Next Yr EPS Growth",
+                            value: formattedMetricValue(.nextYearEPSGrowth, value: profile.metrics[.nextYearEPSGrowth])
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct StockThesisCard: View {
+    let analysis: String?
+    let valuationRationale: String?
+    let canEdit: Bool
+    let onEdit: () -> Void
+
+    private var normalizedAnalysis: String? {
+        analysis?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    private var normalizedValuationRationale: String? {
+        valuationRationale?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+    }
+
+    private var thesisText: String {
+        if let normalizedAnalysis {
+            return normalizedAnalysis
+        }
+
+        if let normalizedValuationRationale {
+            return normalizedValuationRationale
+        }
+
+        return "Add your thesis, key risks, and the signals that would make you add, trim, or exit the position."
+    }
+
+    private var supportingText: String {
+        if normalizedAnalysis != nil {
+            return "Your saved analysis for this position."
+        }
+
+        if normalizedValuationRationale != nil {
+            return "Using the saved valuation rationale until you add position-specific analysis."
+        }
+
+        return "Capture your own view on the business, risks, and what would change your mind."
+    }
+
+    private var editLabel: String {
+        normalizedAnalysis == nil && normalizedValuationRationale == nil ? "Add" : "Edit"
+    }
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Analysis")
+                            .typography(.small, weight: .semibold)
+
+                        Text(supportingText)
+                            .typography(.nano)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    if canEdit {
+                        Button(editLabel, action: onEdit)
+                            .typography(.small, weight: .semibold)
+                            .buttonStyle(.plain)
+                    }
+                }
+
+                Text(thesisText)
+                    .typography(.small)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
     }
 }
 
@@ -1215,4 +1553,14 @@ private func percentText(_ value: Double?) -> String {
 
 private func multipleText(_ value: Double) -> String {
     value.formatted(.number.precision(.fractionLength(1))) + "x"
+}
+
+private func signedCurrencyText(_ value: Double) -> String {
+    let prefix = value >= 0 ? "+" : "-"
+    return prefix + abs(value).currency
+}
+
+private func signedPercentText(_ value: Double) -> String {
+    let prefix = value >= 0 ? "+" : "-"
+    return prefix + percentText(abs(value))
 }

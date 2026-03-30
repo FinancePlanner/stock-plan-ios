@@ -26,6 +26,7 @@ struct LoginScreen: View {
   @State private var termsURL: URL?
   @State private var privacyURL: URL?
   @State private var isEnvironmentPresented = false
+  @State private var isPasswordVisible = false
 
   @FocusState private var focusedField: LoginViewModel.Field?
 
@@ -288,7 +289,14 @@ struct LoginScreen: View {
 
       // --- Password ---
       connectedField(icon: "lock", iconColor: .secondary) {
-        SecureField("Password", text: $viewModel.password)
+        HStack(spacing: 12) {
+          Group {
+            if isPasswordVisible {
+              TextField("Password", text: $viewModel.password)
+            } else {
+              SecureField("Password", text: $viewModel.password)
+            }
+          }
           .textContentType(viewModel.isSignup ? .newPassword : .password)
           .textInputAutocapitalization(.never)
           .autocorrectionDisabled()
@@ -302,6 +310,19 @@ struct LoginScreen: View {
             }
           }
           .accessibilityLabel(viewModel.isSignup ? "New Password" : "Password")
+
+          Button {
+            isPasswordVisible.toggle()
+            focusedField = .password
+          } label: {
+            Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
+              .font(.subheadline.weight(.semibold))
+              .foregroundStyle(.secondary)
+              .frame(width: 28, height: 28)
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel(isPasswordVisible ? "Hide password" : "Show password")
+        }
       }
       fieldError(for: .password)
 
