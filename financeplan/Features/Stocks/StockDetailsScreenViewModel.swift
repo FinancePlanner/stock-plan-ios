@@ -332,6 +332,8 @@ final class StockDetailsViewModel: ObservableObject {
         let low = max(0.01, min(profile.currentPrice, open) - (rangeSize * 0.55))
 
         marketSnapshot = StockMarketSnapshot(
+            symbol: profile.symbol,
+            currency: "USD",
             currentPrice: profile.currentPrice,
             change: change,
             percentChange: nil,
@@ -342,6 +344,7 @@ final class StockDetailsViewModel: ObservableObject {
             timestamp: Date.now.timeIntervalSince1970
         )
     }
+
 
     private func fillMissingPeers() {
         guard let primaryComparisonProfile else { return }

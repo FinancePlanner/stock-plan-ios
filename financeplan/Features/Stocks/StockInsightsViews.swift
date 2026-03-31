@@ -467,12 +467,12 @@ private struct StockMarketSnapshotCard: View {
                         .typography(.hero, weight: .bold)
                         .monospacedDigit()
 
-                    Text(signedCurrencyText(snapshot.change))
+                    Text(signedCurrencyText(snapshot.change ?? 0))
                         .typography(.small, weight: .semibold)
                         .monospacedDigit()
                         .foregroundStyle(changeTint)
 
-                    Text(signedPercentText(snapshot.percentChange))
+                    Text(signedPercentText(snapshot.percentChange ?? 0))
                         .typography(.small, weight: .semibold)
                         .foregroundStyle(changeTint)
                         .monospacedDigit()
@@ -482,13 +482,13 @@ private struct StockMarketSnapshotCard: View {
 
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 12) {
                     GridRow {
-                        DetailItem(title: "Open", value: snapshot.open.currency)
-                        DetailItem(title: "Prev close", value: snapshot.previousClose.currency)
+                        DetailItem(title: "Open", value: snapshot.open?.currency ?? "—")
+                        DetailItem(title: "Prev close", value: snapshot.previousClose?.currency ?? "—")
                     }
 
                     GridRow {
-                        DetailItem(title: "Day high", value: snapshot.high.currency)
-                        DetailItem(title: "Day low", value: snapshot.low.currency)
+                        DetailItem(title: "Day high", value: snapshot.high?.currency ?? "—")
+                        DetailItem(title: "Day low", value: snapshot.low?.currency ?? "—")
                     }
                 }
 
@@ -511,7 +511,7 @@ private struct StockSessionRangeBar: View {
                     .typography(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(snapshot.low.currency) - \(snapshot.high.currency)")
+                Text("\(snapshot.low?.currency ?? "—") - \(snapshot.high?.currency ?? "—")")
                     .typography(.caption, weight: .semibold)
                     .foregroundStyle(.primary)
                     .monospacedDigit()

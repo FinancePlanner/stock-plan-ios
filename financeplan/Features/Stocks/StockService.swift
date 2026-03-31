@@ -5,7 +5,7 @@ protocol StockServicing {
   @discardableResult
   func create(stock: StockRequest) async throws -> StockResponse
   @discardableResult
-  func bulkCreate(stocks: [StockRequest]) async throws -> BulkCreateStocksResponse
+  func bulkCreate(stocks: [StockRequest]) async throws -> BulkStockResponse
   func fetchPortfolio() async throws -> [StockResponse]
   func fetchStockDetails(stockId: String) async throws -> StockDetails
   func fetchStockHistory(symbol: String) async throws -> [StockHistory]
@@ -84,7 +84,7 @@ final class StockService: StockServicing {
   }
 
   @discardableResult
-  func bulkCreate(stocks: [StockRequest]) async throws -> BulkCreateStocksResponse {
+  func bulkCreate(stocks: [StockRequest]) async throws -> BulkStockResponse {
     try await performAuthenticated { client in
       let endpoint = BulkCreateStocksEndpoint(stocks: stocks)
       return try await client.call(endpoint)

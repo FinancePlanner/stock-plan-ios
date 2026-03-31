@@ -39,7 +39,7 @@ final class StockDetailsViewModelTests: XCTestCase {
       throw MockError.notConfigured
     }
 
-    func bulkCreate(stocks _: [StockRequest]) async throws -> BulkCreateStocksResponse {
+    func bulkCreate(stocks _: [StockRequest]) async throws -> BulkStockResponse {
       throw MockError.notConfigured
     }
 
@@ -328,6 +328,8 @@ final class StockDetailsViewModelTests: XCTestCase {
 
   func testMarketSnapshot_WhenChangeFieldsMissing_ComputesChangeAndPercent() {
     let snapshot = StockMarketSnapshot(
+      symbol: "TEST",
+      currency: "USD",
       currentPrice: 261.74,
       high: 263.31,
       low: 260.68,

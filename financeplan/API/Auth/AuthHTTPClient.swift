@@ -15,11 +15,8 @@ private let authHTTPLogger = Logger(
 )
 
 struct AuthHTTPClient {
-  private static let decoder: JSONDecoder = {
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
-    return decoder
-  }()
+  private static let decoder: JSONDecoder = .stockPlanShared
+
 
   enum Error: LocalizedError, Equatable {
     case invalidResponse

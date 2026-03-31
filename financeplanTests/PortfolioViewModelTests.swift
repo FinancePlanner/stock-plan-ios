@@ -114,7 +114,7 @@ private final class MockStockService: StockServicing {
     try createResult.get()
   }
 
-  func bulkCreate(stocks _: [StockRequest]) async throws -> BulkCreateStocksResponse {
+  func bulkCreate(stocks _: [StockRequest]) async throws -> BulkStockResponse {
     throw MockError("Not configured.")
   }
 

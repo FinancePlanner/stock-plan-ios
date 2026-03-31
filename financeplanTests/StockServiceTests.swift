@@ -81,7 +81,7 @@ final class StockServiceTests: XCTestCase {
       session: session,
       authSessionManager: authSessionManager
     )
-    let expected = BulkCreateStocksResponse(
+    let expected = BulkStockResponse(
       created: 1,
       failed: 0,
       results: [
@@ -165,7 +165,7 @@ final class StockServiceTests: XCTestCase {
 
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer fresh-token")
 
-      let payload = BulkCreateStocksResponse(created: 1, failed: 0, results: [])
+      let payload = BulkStockResponse(created: 1, failed: 0, results: [])
       let response = try XCTUnwrap(
         HTTPURLResponse(
           url: try XCTUnwrap(request.url),

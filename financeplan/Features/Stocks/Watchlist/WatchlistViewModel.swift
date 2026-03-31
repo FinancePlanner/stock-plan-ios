@@ -72,7 +72,7 @@ final class WatchlistViewModel: ObservableObject {
         symbol: draft.symbol.uppercased(),
         shares: shares,
         buyPrice: buyPrice,
-        buyDate: Self.dateOnlyFormatter.string(from: draft.buyDate),
+        buyDate: DateFormatter.yyyyMMdd.string(from: draft.buyDate),
         notes: draft.notes.isEmpty ? nil : draft.notes
       )
 
@@ -94,13 +94,4 @@ final class WatchlistViewModel: ObservableObject {
       errorMessage = error.localizedDescription
     }
   }
-
-  private static let dateOnlyFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .iso8601)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = .init(secondsFromGMT: 0)
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter
-  }()
 }

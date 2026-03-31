@@ -282,7 +282,8 @@ struct ManualImportScreen: View {
     let positions = viewModel.buildPositions()
     Task {
       do {
-        let today = Self.dateOnlyFormatter.string(from: Date())
+        let today = DateFormatter.yyyyMMdd.string(from: Date())
+
         let requests: [StockRequest] = positions.map { pos in
           StockRequest(
             symbol: pos.symbol,
@@ -302,15 +303,6 @@ struct ManualImportScreen: View {
       }
     }
   }
-
-  private static let dateOnlyFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .iso8601)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = .init(secondsFromGMT: 0)
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter
-  }()
 }
 
 // MARK: - Manual Entry Card

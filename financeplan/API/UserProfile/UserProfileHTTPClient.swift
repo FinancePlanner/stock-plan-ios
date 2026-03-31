@@ -130,12 +130,13 @@ struct UserProfileHTTPClient {
   }
 
   private func errorMessage(from data: Data) -> String? {
-    if let stockError = try? JSONDecoder().decode(StockPlanShared.APIErrorResponse.self, from: data),
+    let decoder = JSONDecoder.stockPlanShared
+    if let stockError = try? decoder.decode(StockPlanShared.APIErrorResponse.self, from: data),
        !stockError.error.isEmpty {
       return stockError.error
     }
 
-    if let stockEnvelope = try? JSONDecoder().decode(APIEnvelope<StockPlanShared.APIErrorResponse>.self, from: data) {
+    if let stockEnvelope = try? decoder.decode(APIEnvelope<StockPlanShared.APIErrorResponse>.self, from: data) {
       if let nestedError = stockEnvelope.data?.error, !nestedError.isEmpty {
         return nestedError
       }
@@ -143,6 +144,7 @@ struct UserProfileHTTPClient {
         return message
       }
     }
+
 
     if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
       if let error = json["error"] as? String, !error.isEmpty {
