@@ -177,8 +177,14 @@ final class StockDetailsViewModelTests: XCTestCase {
   }
 
   private final class MarketDataServiceMock: MarketDataServicing {
+    var fetchAnalystConsensusCalls = 0
+    var lastFetchAnalystConsensusSymbol: String?
     var fetchCompanyProfileResult: Result<CompanyProfileResponse, Error> = .failure(MockError.notConfigured)
     var fetchQuoteResult: Result<QuoteResponse, Error> = .failure(MockError.notConfigured)
+    var fetchAnalystConsensusResult: Result<StockAnalystConsensus, Error> = .failure(MockError.notConfigured)
+    var fetchBasicFinancialsResult: Result<StockBasicFinancials, Error> = .failure(MockError.notConfigured)
+    var fetchAnalysisMetricsResult: Result<StockAnalysisMetrics, Error> = .failure(MockError.notConfigured)
+    var fetchFinancialStatementsResult: Result<StockFinancialStatements, Error> = .failure(MockError.notConfigured)
 
     func fetchCompanyProfile(symbol _: String) async throws -> CompanyProfileResponse {
       try fetchCompanyProfileResult.get()
@@ -186,6 +192,24 @@ final class StockDetailsViewModelTests: XCTestCase {
 
     func fetchQuote(symbol _: String) async throws -> QuoteResponse {
       try fetchQuoteResult.get()
+    }
+
+    func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus {
+      fetchAnalystConsensusCalls += 1
+      lastFetchAnalystConsensusSymbol = symbol
+      return try fetchAnalystConsensusResult.get()
+    }
+
+    func fetchBasicFinancials(symbol _: String) async throws -> StockBasicFinancials {
+      try fetchBasicFinancialsResult.get()
+    }
+
+    func fetchAnalysisMetrics(symbol _: String) async throws -> StockAnalysisMetrics {
+      try fetchAnalysisMetricsResult.get()
+    }
+
+    func fetchFinancialStatements(symbol _: String) async throws -> StockFinancialStatements {
+      try fetchFinancialStatementsResult.get()
     }
   }
 
@@ -237,9 +261,81 @@ final class StockDetailsViewModelTests: XCTestCase {
     )
   }
 
+  private func makeBasicFinancials(symbol: String = "AAPL") -> StockBasicFinancials {
+    StockBasicFinancials(
+      symbol: symbol,
+      metricType: "all",
+      currencyCode: "USD",
+      peRatio: 29.4,
+      netMargin: 0.2124,
+      currentRatio: 1.5401,
+      beta: 1.2989,
+      fiftyTwoWeekHigh: 310.43,
+      fiftyTwoWeekLow: 149.22,
+      fiftyTwoWeekLowDate: "2019-01-14",
+      fiftyTwoWeekPriceReturnDaily: 101.96334,
+      tenDayAverageTradingVolume: 32.50147,
+      salesPerShareAnnual: [
+        StockBasicFinancialSeriesPoint(period: "2018-09-29", value: 53.1178),
+        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 55.9645),
+      ],
+      currentRatioAnnual: [
+        StockBasicFinancialSeriesPoint(period: "2018-09-29", value: 1.1329),
+        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 1.5401),
+      ],
+      netMarginAnnual: [
+        StockBasicFinancialSeriesPoint(period: "2018-09-29", value: 0.2241),
+        StockBasicFinancialSeriesPoint(period: "2019-09-28", value: 0.2124),
+      ]
+    )
+  }
+
+  private func makeFinancialStatements(symbol: String = "AAPL") -> StockFinancialStatements {
+    StockFinancialStatements.mock(symbol: symbol)
+  }
+
+  private func makeAnalysisMetrics(symbol: String = "AAPL") -> StockAnalysisMetrics {
+    StockAnalysisMetrics(
+      symbol: symbol,
+      ttmPE: 18.4,
+      forwardPE: 16.2,
+      twoYearForwardPE: 14.1,
+      ttmEPSGrowth: 0.11,
+      currentYearExpectedEPSGrowth: 0.13,
+      nextYearEPSGrowth: 0.15,
+      ttmRevenueGrowth: 0.09,
+      currentYearExpectedRevenueGrowth: 0.1,
+      nextYearRevenueGrowth: 0.11,
+      grossMargin: 0.58,
+      netMargin: 0.22,
+      ttmPEGRatio: 1.4,
+      lastYearEPSGrowth: 0.08,
+      ttmVsNTMEPSGrowth: 0.02,
+      currentQuarterEPSGrowthVsPreviousYear: 0.07,
+      twoYearStackExpectedEPSGrowth: 0.2995,
+      lastYearRevenueGrowth: 0.06,
+      ttmVsNTMRevenueGrowth: 0.01,
+      currentQuarterRevenueGrowthVsPreviousYear: 0.05,
+      twoYearStackExpectedRevenueGrowth: 0.221
+    )
+  }
+
+  private func makeAnalystConsensus(symbol: String = "AAPL") -> StockAnalystConsensus {
+    StockAnalystConsensus(
+      symbol: symbol,
+      strongBuy: 1,
+      buy: 49,
+      hold: 11,
+      sell: 0,
+      strongSell: 0,
+      consensus: "Buy"
+    )
+  }
+
   func testShareSnapshot_BuildsStructuredExportText() {
     let service = StockServiceMock()
-    let viewModel = StockDetailsViewModel(service: service)
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
 
     viewModel.details = StockDetails(
       id: "stock-1",
@@ -275,7 +371,8 @@ final class StockDetailsViewModelTests: XCTestCase {
 
   func testShareSnapshot_IsNilWithoutLoadedDetails() {
     let service = StockServiceMock()
-    let viewModel = StockDetailsViewModel(service: service)
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
 
     XCTAssertNil(viewModel.shareSnapshot)
   }
@@ -296,6 +393,8 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertTrue(viewModel.news.isEmpty)
     XCTAssertNil(viewModel.valuation)
     XCTAssertNil(viewModel.marketSnapshot)
+    XCTAssertNil(viewModel.basicFinancials)
+    XCTAssertNil(viewModel.financialStatements)
   }
 
   func testSavePosition_UpdatesDetailsFromService() async {
@@ -362,11 +461,27 @@ final class StockDetailsViewModelTests: XCTestCase {
         timestamp: 1_775_073_600
       )
     )
+    marketDataService.fetchAnalystConsensusResult = .success(makeAnalystConsensus(symbol: "META"))
+    marketDataService.fetchBasicFinancialsResult = .success(makeBasicFinancials(symbol: "META"))
+    marketDataService.fetchAnalysisMetricsResult = .success(makeAnalysisMetrics(symbol: "META"))
+    marketDataService.fetchFinancialStatementsResult = .success(makeFinancialStatements(symbol: "META"))
 
     await viewModel.load(stockId: "stock-1")
 
     XCTAssertEqual(viewModel.companyProfile?.ticker, "META")
+    XCTAssertEqual(viewModel.analystConsensus?.symbol, "META")
+    XCTAssertNil(viewModel.analystConsensusMessage)
+    XCTAssertEqual(viewModel.basicFinancials?.symbol, "META")
+    XCTAssertNil(viewModel.analysisMetricsMessage)
+    XCTAssertEqual(viewModel.financialStatements?.symbol, "META")
+    XCTAssertEqual(viewModel.financialStatements?.ratios(for: .fy).first?.symbol, "META")
+    XCTAssertEqual(viewModel.financialStatements?.estimates.count, 3)
+    XCTAssertEqual(marketDataService.fetchAnalystConsensusCalls, 1)
+    XCTAssertEqual(marketDataService.lastFetchAnalystConsensusSymbol, "META")
     XCTAssertEqual(viewModel.primaryComparisonProfile?.symbol, "META")
+    XCTAssertEqual(viewModel.analysisMetrics?.symbol, "META")
+    XCTAssertEqual(viewModel.primaryComparisonProfile?.metrics[.ttmPE], 18.4)
+    XCTAssertEqual(viewModel.primaryComparisonProfile?.metrics[.grossMargin], 0.58)
     XCTAssertEqual(viewModel.selectedPeerSymbols.count, 2)
     XCTAssertEqual(viewModel.comparisonProfiles.count, 3)
     XCTAssertNotNil(viewModel.projectionScenario(.base))
@@ -375,6 +490,59 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertNotNil(viewModel.marketSnapshot)
     let currentPrice = try XCTUnwrap(viewModel.marketSnapshot?.currentPrice)
     XCTAssertEqual(currentPrice, 612.42, accuracy: 0.001)
+  }
+
+  func testLoad_WhenConsensusTickerIsUnsupported_SetsWarningWithoutFetchingConsensus() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "ZETA"))
+
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertNil(viewModel.analystConsensus)
+    XCTAssertEqual(marketDataService.fetchAnalystConsensusCalls, 0)
+    XCTAssertEqual(
+      viewModel.analystConsensusMessage,
+      StockAnalystConsensus.unsupportedPlanMessage(for: "ZETA")
+    )
+  }
+
+  func testLoad_WhenAnalysisTickerIsUnsupported_SetsWarningWithoutApplyingAnalysisMetrics() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "ZETA"))
+
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertNil(viewModel.analysisMetrics)
+    XCTAssertEqual(
+      viewModel.analysisMetricsMessage,
+      FMPFreeTierCoverage.unsupportedAnalysisMessage(for: "ZETA")
+    )
+    XCTAssertEqual(viewModel.primaryComparisonProfile?.symbol, "ZETA")
+    XCTAssertEqual(viewModel.primaryComparisonProfile?.metrics[.ttmPE], 24.4)
+    XCTAssertEqual(viewModel.primaryComparisonProfile?.metrics[.grossMargin], 0.61)
+  }
+
+  func testLoad_WhenAnalysisMetricsFail_KeepsMockPrimaryProfileMetrics() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "META"))
+    marketDataService.fetchAnalysisMetricsResult = .failure(MockError.notConfigured)
+
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertNil(viewModel.analysisMetrics)
+    XCTAssertNil(viewModel.analysisMetricsMessage)
+    XCTAssertEqual(viewModel.primaryComparisonProfile?.symbol, "META")
+    XCTAssertEqual(viewModel.primaryComparisonProfile?.metrics[.ttmPE], 24.9)
+    XCTAssertEqual(viewModel.primaryComparisonProfile?.metrics[.grossMargin], 0.81)
   }
 
   func testMarketSnapshot_WhenChangeFieldsMissing_ComputesChangeAndPercent() throws {

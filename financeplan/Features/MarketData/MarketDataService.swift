@@ -4,6 +4,10 @@ import StockPlanShared
 protocol MarketDataServicing {
   func fetchCompanyProfile(symbol: String) async throws -> CompanyProfileResponse
   func fetchQuote(symbol: String) async throws -> QuoteResponse
+  func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus
+  func fetchBasicFinancials(symbol: String) async throws -> StockBasicFinancials
+  func fetchAnalysisMetrics(symbol: String) async throws -> StockAnalysisMetrics
+  func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements
 }
 
 final class MarketDataHTTPService: MarketDataServicing {
@@ -31,6 +35,28 @@ final class MarketDataHTTPService: MarketDataServicing {
     try await performAuthenticated { client in
       try await client.fetchQuote(symbol: symbol)
     }
+  }
+
+  func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus {
+    try await performAuthenticated { client in
+      try await client.fetchAnalystConsensus(symbol: symbol)
+    }
+  }
+
+  func fetchBasicFinancials(symbol: String) async throws -> StockBasicFinancials {
+    try await performAuthenticated { client in
+      try await client.fetchBasicFinancials(symbol: symbol)
+    }
+  }
+
+  func fetchAnalysisMetrics(symbol: String) async throws -> StockAnalysisMetrics {
+    try await performAuthenticated { client in
+      try await client.fetchAnalysisMetrics(symbol: symbol)
+    }
+  }
+
+  func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements {
+    StockFinancialStatements.mock(symbol: symbol)
   }
 
   private func makeClient(forceRefresh: Bool = false) async throws -> MarketDataHTTPClient {
@@ -82,4 +108,24 @@ struct MarketDataServiceStub: MarketDataServicing {
   func fetchQuote(symbol _: String) async throws -> QuoteResponse {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
+
+  func fetchAnalystConsensus(symbol _: String) async throws -> StockAnalystConsensus {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchBasicFinancials(symbol _: String) async throws -> StockBasicFinancials {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchAnalysisMetrics(symbol _: String) async throws -> StockAnalysisMetrics {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements {
+    StockFinancialStatements.mock(symbol: symbol)
+  }
+}
+
+enum MarketDataServiceDefaults {
+  static let stub: any MarketDataServicing = MarketDataServiceStub()
 }

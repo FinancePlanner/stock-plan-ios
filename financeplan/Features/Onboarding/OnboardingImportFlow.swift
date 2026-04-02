@@ -13,6 +13,7 @@ struct OnboardingImportFlow: View {
   @StateObject private var viewModel = OnboardingImportViewModel()
   @Namespace private var headerNS
   let onFinished: () -> Void
+  let onSignOut: () async -> Void
 
   var body: some View {
     Group {
@@ -20,6 +21,11 @@ struct OnboardingImportFlow: View {
       case .chooseMethod:
         InitialStockImportScreen(
           onImportCompleted: { method in viewModel.select(method) },
+          onSignOut: {
+            Task {
+              await onSignOut()
+            }
+          },
           headerNamespace: headerNS
         )
       case .csv:
@@ -645,9 +651,9 @@ struct OnboardingNavBar: View {
         .frame(width: 64, height: 1)
     }
     .padding(.horizontal, 16)
+    .padding(.top, 8)
     .padding(.vertical, 12)
     .appGlassEffect(.rect(cornerRadius: 0))
-    .ignoresSafeArea(edges: .top)
     .overlay(alignment: .bottom) {
       Divider().opacity(0.2)
     }

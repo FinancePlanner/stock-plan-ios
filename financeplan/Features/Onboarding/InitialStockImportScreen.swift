@@ -63,12 +63,14 @@ struct PressEffectStyle: ButtonStyle {
 
 struct InitialStockImportScreen: View {
   let onImportCompleted: (StockImportMethod) -> Void
+  let onSignOut: () -> Void
   @Environment(\.colorScheme) private var colorScheme
   let headerNamespace: Namespace.ID?
 
   @State private var selectedMethod: StockImportMethod?
   @State private var tappedMethod: StockImportMethod? = nil
   @State private var isSubmitting = false
+  @State private var isSigningOut = false
   @State private var message: String?
   @State private var animatedIndices: Set<Int> = []
   @State private var headerVisible = false
@@ -76,7 +78,10 @@ struct InitialStockImportScreen: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 0) {
-        Spacer(minLength: 32)
+        topActions
+          .padding(.bottom, 20)
+
+        Spacer(minLength: 12)
 
         // MARK: - Hero header
         heroHeader
@@ -108,6 +113,40 @@ struct InitialStockImportScreen: View {
     .scrollBounceBehavior(.basedOnSize)
     .accessibilityIdentifier("initialStockImportScreen")
     .background(MeshGradientBackground().ignoresSafeArea())
+  }
+
+  private var topActions: some View {
+    HStack {
+      Spacer()
+
+      Button {
+        guard !isSigningOut else { return }
+        isSigningOut = true
+        onSignOut()
+      } label: {
+        HStack(spacing: 8) {
+          if isSigningOut {
+            ProgressView()
+              .controlSize(.small)
+              .tint(AppTheme.Colors.tint(for: colorScheme))
+          } else {
+            Image(systemName: "rectangle.portrait.and.arrow.right")
+              .font(.subheadline.weight(.semibold))
+          }
+
+          Text(isSigningOut ? "Signing Out" : "Sign Out")
+            .typography(.small, weight: .semibold)
+        }
+        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .appGlassEffect(.capsule)
+      }
+      .buttonStyle(PressEffectStyle())
+      .accessibilityIdentifier("stockImportSignOutButton")
+      .disabled(isSigningOut)
+    }
+    .padding(.top, 12)
   }
 
   // MARK: - Hero Header

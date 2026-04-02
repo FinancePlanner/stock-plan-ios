@@ -62,10 +62,15 @@ public struct ContentView: View {
       if launchCompleted {
         if isAuthenticated {
           if requiresInitialStockImport {
-            OnboardingImportFlow {
-              sessionStore.markInitialStockImportCompleted(for: sessionStore.currentUserID)
-              requiresInitialStockImport = false
-            }
+            OnboardingImportFlow(
+              onFinished: {
+                sessionStore.markInitialStockImportCompleted(for: sessionStore.currentUserID)
+                requiresInitialStockImport = false
+              },
+              onSignOut: {
+                await authSessionManager.logout()
+              }
+            )
           } else {
             HomeScreen(
               onLogout: {

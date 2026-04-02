@@ -12,12 +12,28 @@ import StockPlanShared
 
 @MainActor
 final class StockDetailsViewModel: ObservableObject {
+    private struct AnalystConsensusLoadResult {
+        let consensus: StockAnalystConsensus?
+        let message: String?
+    }
+
+    private struct AnalysisMetricsLoadResult {
+        let metrics: StockAnalysisMetrics?
+        let message: String?
+    }
+
     @Published var details: StockDetails?
     @Published var history: [StockHistory] = []
     @Published var news: [StockNews] = []
     @Published var valuation: StockValuationRequest?
     @Published private(set) var companyProfile: CompanyProfileResponse?
     @Published private(set) var marketSnapshot: StockMarketSnapshot?
+    @Published private(set) var analystConsensus: StockAnalystConsensus?
+    @Published private(set) var analystConsensusMessage: String?
+    @Published private(set) var basicFinancials: StockBasicFinancials?
+    @Published private(set) var analysisMetrics: StockAnalysisMetrics?
+    @Published private(set) var analysisMetricsMessage: String?
+    @Published private(set) var financialStatements: StockFinancialStatements?
     @Published private(set) var primaryComparisonProfile: StockComparisonProfile?
     @Published private(set) var comparisonUniverse: [StockComparisonProfile] = []
     @Published private(set) var selectedPeerSymbols: [String] = []
@@ -58,9 +74,14 @@ final class StockDetailsViewModel: ObservableObject {
         self.marketDataService = Container.shared.marketDataService()
     }
 
-    init(service: StockServicing, marketDataService: MarketDataServicing = MarketDataServiceStub()) {
+    init(service: StockServicing, marketDataService: MarketDataServicing) {
         self.service = service
         self.marketDataService = marketDataService
+    }
+
+    init(service: StockServicing) {
+        self.service = service
+        self.marketDataService = MarketDataServiceStub()
     }
 
     func savePosition(_ updated: StockResponse) async -> Bool {
@@ -95,6 +116,12 @@ final class StockDetailsViewModel: ObservableObject {
             valuation = nil
             companyProfile = nil
             marketSnapshot = nil
+            analystConsensus = nil
+            analystConsensusMessage = nil
+            basicFinancials = nil
+            analysisMetrics = nil
+            analysisMetricsMessage = nil
+            financialStatements = nil
             primaryComparisonProfile = nil
             comparisonUniverse = []
             selectedPeerSymbols = []
@@ -158,6 +185,10 @@ final class StockDetailsViewModel: ObservableObject {
             async let valuationTask = loadValuation(symbol: symbol)
             async let companyProfileTask = loadCompanyProfile(symbol: symbol)
             async let quoteTask = loadQuote(symbol: symbol)
+            async let analystConsensusTask = loadAnalystConsensus(symbol: symbol)
+            async let basicFinancialsTask = loadBasicFinancials(symbol: symbol)
+            async let analysisMetricsTask = loadAnalysisMetrics(symbol: symbol)
+            async let financialStatementsTask = loadFinancialStatements(symbol: symbol)
 
             self.details = details
             seedMockInsights(for: symbol)
@@ -166,6 +197,15 @@ final class StockDetailsViewModel: ObservableObject {
             self.valuation = await valuationTask
             self.companyProfile = await companyProfileTask
             self.marketSnapshot = await quoteTask
+            let analystConsensusResult = await analystConsensusTask
+            self.analystConsensus = analystConsensusResult.consensus
+            self.analystConsensusMessage = analystConsensusResult.message
+            self.basicFinancials = await basicFinancialsTask
+            let analysisMetricsResult = await analysisMetricsTask
+            self.analysisMetrics = analysisMetricsResult.metrics
+            self.analysisMetricsMessage = analysisMetricsResult.message
+            applyAnalysisMetrics(analysisMetricsResult.metrics, to: symbol)
+            self.financialStatements = await financialStatementsTask
         } catch {
             details = nil
             history = []
@@ -173,6 +213,12 @@ final class StockDetailsViewModel: ObservableObject {
             valuation = nil
             companyProfile = nil
             marketSnapshot = nil
+            analystConsensus = nil
+            analystConsensusMessage = nil
+            basicFinancials = nil
+            analysisMetrics = nil
+            analysisMetricsMessage = nil
+            financialStatements = nil
             primaryComparisonProfile = nil
             comparisonUniverse = []
             selectedPeerSymbols = []
@@ -324,6 +370,75 @@ final class StockDetailsViewModel: ObservableObject {
         }
     }
 
+    private func loadAnalystConsensus(symbol: String) async -> AnalystConsensusLoadResult {
+        guard StockAnalystConsensus.isSupportedTicker(symbol) else {
+            return AnalystConsensusLoadResult(
+                consensus: nil,
+                message: StockAnalystConsensus.unsupportedPlanMessage(for: symbol)
+            )
+        }
+
+        do {
+            let consensus = try await marketDataService.fetchAnalystConsensus(symbol: symbol)
+            return AnalystConsensusLoadResult(consensus: consensus, message: nil)
+        } catch let error as MarketDataHTTPClient.Error {
+            if let message = error.errorDescription,
+               message.localizedCaseInsensitiveContains("premium")
+                || message.localizedCaseInsensitiveContains("subscription") {
+                return AnalystConsensusLoadResult(
+                    consensus: nil,
+                    message: StockAnalystConsensus.unsupportedPlanMessage(for: symbol)
+                )
+            }
+            return AnalystConsensusLoadResult(consensus: nil, message: nil)
+        } catch {
+            return AnalystConsensusLoadResult(consensus: nil, message: nil)
+        }
+    }
+
+    private func loadBasicFinancials(symbol: String) async -> StockBasicFinancials? {
+        do {
+            return try await marketDataService.fetchBasicFinancials(symbol: symbol)
+        } catch {
+            return nil
+        }
+    }
+
+    private func loadAnalysisMetrics(symbol: String) async -> AnalysisMetricsLoadResult {
+        guard FMPFreeTierCoverage.isSupportedTicker(symbol) else {
+            return AnalysisMetricsLoadResult(
+                metrics: nil,
+                message: FMPFreeTierCoverage.unsupportedAnalysisMessage(for: symbol)
+            )
+        }
+
+        do {
+            let metrics = try await marketDataService.fetchAnalysisMetrics(symbol: symbol)
+            return AnalysisMetricsLoadResult(metrics: metrics, message: nil)
+        } catch let error as MarketDataHTTPClient.Error {
+            if let message = error.errorDescription,
+               message.localizedCaseInsensitiveContains("free-tier coverage")
+                || message.localizedCaseInsensitiveContains("premium")
+                || message.localizedCaseInsensitiveContains("subscription") {
+                return AnalysisMetricsLoadResult(
+                    metrics: nil,
+                    message: FMPFreeTierCoverage.unsupportedAnalysisMessage(for: symbol)
+                )
+            }
+            return AnalysisMetricsLoadResult(metrics: nil, message: nil)
+        } catch {
+            return AnalysisMetricsLoadResult(metrics: nil, message: nil)
+        }
+    }
+
+    private func loadFinancialStatements(symbol: String) async -> StockFinancialStatements? {
+        do {
+            return try await marketDataService.fetchFinancialStatements(symbol: symbol)
+        } catch {
+            return nil
+        }
+    }
+
     private func seedMockInsights(for symbol: String) {
         let normalizedSymbol = symbol.uppercased()
         let universe = StockInsightsMockStore.universe(for: normalizedSymbol)
@@ -332,6 +447,23 @@ final class StockDetailsViewModel: ObservableObject {
             ?? StockInsightsMockStore.profile(for: normalizedSymbol)
         selectedPeerSymbols = []
         fillMissingPeers()
+    }
+
+    private func applyAnalysisMetrics(_ metrics: StockAnalysisMetrics?, to symbol: String) {
+        guard let metrics else { return }
+
+        let normalizedSymbol = symbol.uppercased()
+        if let primaryComparisonProfile, primaryComparisonProfile.symbol == normalizedSymbol {
+            self.primaryComparisonProfile = StockComparisonProfile(
+                symbol: primaryComparisonProfile.symbol,
+                companyName: primaryComparisonProfile.companyName,
+                currentPrice: primaryComparisonProfile.currentPrice,
+                marketCap: primaryComparisonProfile.marketCap,
+                sharesOutstanding: primaryComparisonProfile.sharesOutstanding,
+                metrics: metrics.comparisonMetrics,
+                projectionScenarios: primaryComparisonProfile.projectionScenarios
+            )
+        }
     }
 
 

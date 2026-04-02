@@ -64,6 +64,23 @@ struct MarketDataHTTPClient {
     try await call(GetQuoteEndpoint(symbol: symbol))
   }
 
+  func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus {
+    let response = try await call(GetGradesConsensusEndpoint(symbol: symbol))
+    guard let consensus = response.first else {
+      throw Error.api("No analyst consensus is available for this stock right now.")
+    }
+    return consensus
+  }
+
+  func fetchBasicFinancials(symbol: String) async throws -> StockBasicFinancials {
+    let response = try await call(GetBasicFinancialsEndpoint(symbol: symbol))
+    return response.basicFinancials
+  }
+
+  func fetchAnalysisMetrics(symbol: String) async throws -> StockAnalysisMetrics {
+    try await call(GetAnalysisMetricsEndpoint(symbol: symbol))
+  }
+
   private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
     let data = try await perform(endpoint)
     do {
@@ -166,5 +183,175 @@ struct MarketDataHTTPClient {
     }
 
     return request
+  }
+}
+
+struct MarketBasicFinancialsResponse: Codable {
+  let series: MarketBasicFinancialSeriesResponse
+  let metricType: String
+  let metric: [String: MarketBasicFinancialMetricValue]
+  let symbol: String
+
+  var basicFinancials: StockBasicFinancials {
+    StockBasicFinancials(
+      symbol: symbol.uppercased(),
+      metricType: metricType,
+      currencyCode: metric.string("currency"),
+      peRatio: resolvedPERatio,
+      netMargin: resolvedNetMargin,
+      currentRatio: resolvedCurrentRatio,
+      beta: metric.number("beta"),
+      fiftyTwoWeekHigh: metric.number("52WeekHigh"),
+      fiftyTwoWeekLow: metric.number("52WeekLow"),
+      fiftyTwoWeekLowDate: metric.string("52WeekLowDate"),
+      fiftyTwoWeekPriceReturnDaily: metric.number("52WeekPriceReturnDaily"),
+      tenDayAverageTradingVolume: metric.number("10DayAverageTradingVolume"),
+      salesPerShareAnnual: series.points(for: "salesPerShare", frequency: .annual),
+      currentRatioAnnual: series.points(for: "currentRatio", frequency: .annual),
+      netMarginAnnual: series.points(for: "netMargin", frequency: .annual)
+    )
+  }
+
+  private var resolvedPERatio: Double? {
+    metric.number("peTTM")
+      ?? metric.number("peBasicExclExtraTTM")
+      ?? metric.number("peExclExtraTTM")
+      ?? metric.number("peAnnual")
+      ?? metric.number("peNormalizedAnnual")
+      ?? metric.number("forwardPE")
+  }
+
+  private var resolvedNetMargin: Double? {
+    metric.percentFraction("netProfitMarginTTM")
+      ?? metric.percentFraction("netProfitMarginAnnual")
+      ?? series.latestValue(for: "netMargin", frequency: .quarterly)
+      ?? series.latestValue(for: "netMargin", frequency: .annual)
+  }
+
+  private var resolvedCurrentRatio: Double? {
+    metric.number("currentRatioQuarterly")
+      ?? metric.number("currentRatioAnnual")
+      ?? series.latestValue(for: "currentRatio", frequency: .quarterly)
+      ?? series.latestValue(for: "currentRatio", frequency: .annual)
+  }
+}
+
+struct MarketBasicFinancialSeriesResponse: Codable {
+  let annual: [String: [MarketBasicFinancialSeriesValue]]
+  let quarterly: [String: [MarketBasicFinancialSeriesValue]]
+
+  fileprivate func points(
+    for key: String,
+    frequency: MarketBasicFinancialSeriesFrequency
+  ) -> [StockBasicFinancialSeriesPoint] {
+    values(for: key, frequency: frequency)
+      .sorted { $0.period > $1.period }
+      .map { StockBasicFinancialSeriesPoint(period: $0.period, value: $0.value) }
+  }
+
+  fileprivate func latestValue(
+    for key: String,
+    frequency: MarketBasicFinancialSeriesFrequency
+  ) -> Double? {
+    values(for: key, frequency: frequency)
+      .sorted { $0.period > $1.period }
+      .first?
+      .value
+  }
+
+  private func values(
+    for key: String,
+    frequency: MarketBasicFinancialSeriesFrequency
+  ) -> [MarketBasicFinancialSeriesValue] {
+    switch frequency {
+    case .annual:
+      annual[key] ?? []
+    case .quarterly:
+      quarterly[key] ?? []
+    }
+  }
+}
+
+struct MarketBasicFinancialSeriesValue: Codable, Equatable {
+  let period: String
+  let value: Double
+
+  private enum CodingKeys: String, CodingKey {
+    case period
+    case value = "v"
+  }
+}
+
+enum MarketBasicFinancialSeriesFrequency {
+  case annual
+  case quarterly
+}
+
+enum MarketBasicFinancialMetricValue: Codable, Equatable {
+  case number(Double)
+  case string(String)
+  case null
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.singleValueContainer()
+
+    if container.decodeNil() {
+      self = .null
+      return
+    }
+
+    if let value = try? container.decode(Double.self) {
+      self = .number(value)
+      return
+    }
+
+    if let value = try? container.decode(Int.self) {
+      self = .number(Double(value))
+      return
+    }
+
+    if let value = try? container.decode(String.self) {
+      self = .string(value)
+      return
+    }
+
+    throw DecodingError.typeMismatch(
+      MarketBasicFinancialMetricValue.self,
+      DecodingError.Context(
+        codingPath: decoder.codingPath,
+        debugDescription: "Expected a number, string, or null basic financial metric value."
+      )
+    )
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.singleValueContainer()
+
+    switch self {
+    case let .number(value):
+      try container.encode(value)
+    case let .string(value):
+      try container.encode(value)
+    case .null:
+      try container.encodeNil()
+    }
+  }
+}
+
+private extension Dictionary where Key == String, Value == MarketBasicFinancialMetricValue {
+  func number(_ key: String) -> Double? {
+    guard let value = self[key] else { return nil }
+    guard case let .number(number) = value else { return nil }
+    return number
+  }
+
+  func string(_ key: String) -> String? {
+    guard let value = self[key] else { return nil }
+    guard case let .string(string) = value else { return nil }
+    return string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : string
+  }
+
+  func percentFraction(_ key: String) -> Double? {
+    number(key).map { $0 / 100 }
   }
 }

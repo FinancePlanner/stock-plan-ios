@@ -3,6 +3,7 @@ import StockPlanShared
 
 enum StockDetailTab: String, CaseIterable, Identifiable {
     case overview
+    case statements
     case analysis
     case forecast
     case compare
@@ -15,6 +16,8 @@ enum StockDetailTab: String, CaseIterable, Identifiable {
         switch self {
         case .overview:
             "Overview"
+        case .statements:
+            "Statements"
         case .analysis:
             "Analysis"
         case .forecast:

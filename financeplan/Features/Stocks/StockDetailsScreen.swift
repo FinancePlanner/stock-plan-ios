@@ -19,6 +19,7 @@ struct StockDetailScreen: View {
     @State private var showEditAnalysis = false
     @State private var selectedTab: StockDetailTab = .overview
     @State private var selectedScenario: StockProjectionScenarioKind = .base
+    @State private var selectedStatementPeriod: StockFinancialStatementPeriod = .fy
 
     var body: some View {
         Group {
@@ -136,14 +137,24 @@ struct StockDetailScreen: View {
                         details: viewModel.details,
                         valuation: viewModel.valuation,
                         marketSnapshot: viewModel.marketSnapshot,
+                        analystConsensus: viewModel.analystConsensus,
+                        analystConsensusMessage: viewModel.analystConsensusMessage,
+                        basicFinancials: viewModel.basicFinancials,
                         errorMessage: viewModel.errorMessage,
                         onEditValuation: { showEditValuation = true },
                         onEditPosition: { showEditPosition = true }
+                    )
+                case .statements:
+                    StockFinancialStatementsTab(
+                        statements: viewModel.financialStatements,
+                        selectedPeriod: $selectedStatementPeriod
                     )
                 case .analysis:
                     StockAnalysisTab(
                         details: viewModel.details,
                         profile: viewModel.primaryComparisonProfile,
+                        analysisMetrics: viewModel.analysisMetrics,
+                        analysisMetricsMessage: viewModel.analysisMetricsMessage,
                         valuation: viewModel.valuation,
                         onEditAnalysis: { showEditAnalysis = true }
                     )
@@ -169,6 +180,7 @@ struct StockDetailScreen: View {
         }
         .animation(.snappy(duration: 0.24), value: selectedTab)
         .animation(.snappy(duration: 0.24), value: selectedScenario)
+        .animation(.snappy(duration: 0.24), value: selectedStatementPeriod)
         .tint(AppTheme.Colors.tint(for: colorScheme))
     }
 }

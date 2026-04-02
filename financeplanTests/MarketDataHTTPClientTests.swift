@@ -106,4 +106,58 @@ final class MarketDataHTTPClientTests: XCTestCase {
     XCTAssertEqual(try XCTUnwrap(response.previousClose), 15.92, accuracy: 0.001)
     XCTAssertEqual(response.timestamp, 1_775_073_600, accuracy: 0.1)
   }
+
+  func testFetchAnalysisMetrics_SendsCorrectRequestAndDecodesPayload() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+
+    session.handler = { request in
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/market/analysis/ZETA")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+      XCTAssertNil(request.httpBody)
+
+      let payload = """
+      {
+        "symbol": "ZETA",
+        "ttmPE": 21.4,
+        "forwardPE": 18.9,
+        "twoYearForwardPE": 16.4,
+        "ttmEPSGrowth": 0.12,
+        "currentYearExpectedEPSGrowth": 0.14,
+        "nextYearEPSGrowth": 0.15,
+        "ttmRevenueGrowth": 0.1,
+        "currentYearExpectedRevenueGrowth": 0.11,
+        "nextYearRevenueGrowth": 0.12,
+        "grossMargin": 0.61,
+        "netMargin": 0.2,
+        "ttmPEGRatio": 1.6,
+        "lastYearEPSGrowth": 0.09,
+        "ttmVsNTMEPSGrowth": 0.02,
+        "currentQuarterEPSGrowthVsPreviousYear": 0.08,
+        "twoYearStackExpectedEPSGrowth": 0.31,
+        "lastYearRevenueGrowth": 0.07,
+        "ttmVsNTMRevenueGrowth": 0.01,
+        "currentQuarterRevenueGrowthVsPreviousYear": 0.06,
+        "twoYearStackExpectedRevenueGrowth": 0.24
+      }
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (payload, response)
+    }
+
+    let client = MarketDataHTTPClient(
+      baseURL: baseURL,
+      session: session,
+      authTokenProvider: { "token-123" }
+    )
+    let response = try await client.fetchAnalysisMetrics(symbol: "zeta")
+
+    XCTAssertEqual(response.symbol, "ZETA")
+    XCTAssertEqual(try XCTUnwrap(response.ttmPE), 21.4, accuracy: 0.0001)
+    XCTAssertEqual(try XCTUnwrap(response.netMargin), 0.2, accuracy: 0.0001)
+    XCTAssertEqual(try XCTUnwrap(response.comparisonMetrics[.grossMargin]), 0.61, accuracy: 0.0001)
+  }
 }

@@ -150,6 +150,9 @@ struct StockOverviewTab: View {
     let details: StockDetails?
     let valuation: StockValuationRequest?
     let marketSnapshot: StockMarketSnapshot?
+    let analystConsensus: StockAnalystConsensus?
+    let analystConsensusMessage: String?
+    let basicFinancials: StockBasicFinancials?
     let errorMessage: String?
     let onEditValuation: () -> Void
     let onEditPosition: () -> Void
@@ -171,6 +174,21 @@ struct StockOverviewTab: View {
                 }
             }
 
+            if let analystConsensus {
+                StockConsensusCard(consensus: analystConsensus)
+            } else {
+                StockConsensusPlaceholderCard(
+                    message: analystConsensusMessage,
+                    isWarning: analystConsensusMessage != nil
+                )
+            }
+
+            if let basicFinancials {
+                StockBasicFinancialsCard(financials: basicFinancials)
+            } else {
+                StockBasicFinancialsPlaceholderCard()
+            }
+
             StockValuationSummaryCard(
                 valuation: valuation,
                 onEditValuation: onEditValuation
@@ -188,17 +206,73 @@ struct StockOverviewTab: View {
     }
 }
 
+struct StockFinancialStatementsTab: View {
+    let statements: StockFinancialStatements?
+    @Binding var selectedPeriod: StockFinancialStatementPeriod
+
+    var body: some View {
+        LazyVStack(spacing: 16) {
+            if let statements {
+                FinancialStatementsIntroCard(symbol: statements.symbol)
+                FinancialStatementPeriodPicker(selectedPeriod: $selectedPeriod)
+                FinancialStatementTableCard(
+                    title: "Balance sheet",
+                    subtitle: "Review assets, liabilities, and equity across the selected filing period.",
+                    statements: statements.balanceSheets(for: selectedPeriod),
+                    emptyText: "No balance sheet filings are available for \(selectedPeriod.title)."
+                )
+                FinancialStatementTableCard(
+                    title: "Cash flow",
+                    subtitle: "Review operating, investing, and financing cash movements across the selected filing period.",
+                    statements: statements.cashFlows(for: selectedPeriod),
+                    emptyText: "No cash flow filings are available for \(selectedPeriod.title)."
+                )
+                FinancialMetricTableCard(
+                    title: "Ratios",
+                    subtitle: "Review valuation, capital efficiency, returns, and working-capital metrics across the selected filing period.",
+                    snapshots: statements.ratios(for: selectedPeriod),
+                    emptyText: "No ratio snapshots are available for \(selectedPeriod.title)."
+                )
+                FinancialMetricTableCard(
+                    title: "Financial growth",
+                    subtitle: "Review revenue, EPS, cash flow, share count, and long-term per-share growth across the selected filing period.",
+                    snapshots: statements.growth(for: selectedPeriod),
+                    emptyText: "No growth snapshots are available for \(selectedPeriod.title)."
+                )
+                FinancialMetricTableCard(
+                    title: "Financial estimates",
+                    subtitle: "Review forward revenue, EBITDA, EBIT, net income, SG&A, EPS, and analyst-count ranges.",
+                    snapshots: statements.estimates,
+                    emptyText: "No financial estimates are available right now."
+                )
+            } else {
+                ResearchPlaceholderCard(
+                    title: "Financial statements (Soon)",
+                    bodyText: "Wire the statements, ratios, growth, and estimate endpoints here to review filings by Q1, Q2, Q3, Q4, FY, annual, or quarter."
+                )
+            }
+        }
+    }
+}
+
 struct StockAnalysisTab: View {
     let details: StockDetails?
     let profile: StockComparisonProfile?
+    let analysisMetrics: StockAnalysisMetrics?
+    let analysisMetricsMessage: String?
     let valuation: StockValuationRequest?
     let onEditAnalysis: () -> Void
 
     var body: some View {
         LazyVStack(spacing: 16) {
-            if let profile {
+            if let profile, analysisMetrics != nil {
                 StockCurrentMetricsCard(profile: profile)
                 StockFundamentalsCard(profile: profile)
+            } else {
+                StockAnalysisPlaceholderCard(
+                    message: analysisMetricsMessage,
+                    isWarning: analysisMetricsMessage != nil
+                )
             }
 
             StockThesisCard(
@@ -362,6 +436,79 @@ struct StockEarningsTab: View {
     }
 }
 
+private struct FinancialStatementsIntroCard: View {
+    let symbol: String
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "building.columns")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Financial statements")
+                            .typography(.small, weight: .semibold)
+
+                        Text("Review balance sheet strength and cash generation for \(symbol), with local sample data in place until the MarketData endpoint is wrapped.")
+                            .typography(.small)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct FinancialStatementPeriodPicker: View {
+    @Binding var selectedPeriod: StockFinancialStatementPeriod
+    @Namespace private var selectionNamespace
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Statement period")
+                    .typography(.small, weight: .semibold)
+
+                Text("Switch between single filings or grouped annual and quarterly views.")
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(StockFinancialStatementPeriod.allCases) { period in
+                            Button {
+                                withAnimation(.snappy(duration: 0.22)) {
+                                    selectedPeriod = period
+                                }
+                            } label: {
+                                Text(period.title)
+                                    .typography(.caption, weight: .semibold)
+                                    .foregroundStyle(selectedPeriod == period ? .primary : .secondary)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                    .background {
+                                        if selectedPeriod == period {
+                                            Capsule()
+                                                .fill(Color.secondary.opacity(0.12))
+                                                .matchedGeometryEffect(id: "financial-statement-period", in: selectionNamespace)
+                                        } else {
+                                            Capsule()
+                                                .fill(Color.secondary.opacity(0.06))
+                                        }
+                                    }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct StockDetailTabBar: View {
     @Binding var selectedTab: StockDetailTab
     @Namespace private var selectionNamespace
@@ -398,6 +545,265 @@ struct StockDetailTabBar: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Stock detail sections")
+    }
+}
+
+private struct FinancialStatementTableCard: View {
+    let title: String
+    let subtitle: String
+    let statements: [StockFinancialStatement]
+    let emptyText: String
+
+    private var visibleEntries: [StockFinancialStatementEntry] {
+        statements.first?.entries ?? []
+    }
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .typography(.small, weight: .semibold)
+
+                    Text(subtitle)
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let latest = statements.first {
+                    HStack(spacing: 8) {
+                        StatementMetaPill(text: "Reported in \(latest.reportedCurrency)")
+                        StatementMetaPill(text: "\(statements.count) filing\(statements.count == 1 ? "" : "s")")
+                    }
+                }
+
+                if statements.isEmpty {
+                    Text(emptyText)
+                        .typography(.small)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            FinancialStatementHeaderRow(statements: statements)
+                            Divider()
+
+                            ForEach(visibleEntries) { entry in
+                                FinancialStatementMetricRow(
+                                    entry: entry,
+                                    statements: statements
+                                )
+                                Divider()
+                            }
+                        }
+                        .frame(minWidth: financialStatementTableMinWidth(statementCount: statements.count), alignment: .leading)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct StatementMetaPill: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .typography(.caption, weight: .semibold)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.secondary.opacity(0.08), in: Capsule())
+    }
+}
+
+private struct FinancialStatementHeaderRow: View {
+    let statements: [StockFinancialStatement]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text("Metric")
+                .typography(.caption, weight: .semibold)
+                .foregroundStyle(.secondary)
+                .frame(width: 190, alignment: .leading)
+
+            ForEach(statements) { statement in
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(statement.displayColumnTitle)
+                        .typography(.caption, weight: .semibold)
+                        .foregroundStyle(.secondary)
+
+                    Text(statement.formattedDate)
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+
+                    Text("Filed \(statement.formattedFilingDate)")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 146, alignment: .trailing)
+                .padding(.vertical, 10)
+            }
+        }
+    }
+}
+
+private struct FinancialStatementMetricRow: View {
+    let entry: StockFinancialStatementEntry
+    let statements: [StockFinancialStatement]
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text(entry.title)
+                .typography(.nano, weight: .semibold)
+                .foregroundStyle(.primary)
+                .frame(width: 190, alignment: .leading)
+                .padding(.vertical, 10)
+
+            ForEach(Array(statements.enumerated()), id: \.element.id) { index, statement in
+                Text(
+                    statement.value(for: entry.id).map {
+                        formattedFinancialStatementValue($0, currencyCode: statement.reportedCurrency)
+                    } ?? "—"
+                )
+                .typography(.nano, weight: .semibold)
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+                .frame(width: 146, alignment: .trailing)
+                .padding(.vertical, 10)
+                .background(
+                    index == 0
+                        ? AppTheme.Colors.tint(for: colorScheme).opacity(0.08)
+                        : Color.clear
+                )
+            }
+        }
+    }
+}
+
+private struct FinancialMetricTableCard: View {
+    let title: String
+    let subtitle: String
+    let snapshots: [StockFinancialMetricSnapshot]
+    let emptyText: String
+
+    private var sortedSnapshots: [StockFinancialMetricSnapshot] {
+        snapshots.sorted { $0.date > $1.date }
+    }
+
+    private var visibleEntries: [StockFinancialMetricEntry] {
+        sortedSnapshots.first?.entries ?? []
+    }
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .typography(.small, weight: .semibold)
+
+                    Text(subtitle)
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let latest = sortedSnapshots.first {
+                    HStack(spacing: 8) {
+                        if let reportedCurrency = latest.reportedCurrency, !reportedCurrency.isEmpty {
+                            StatementMetaPill(text: "Reported in \(reportedCurrency)")
+                        }
+                        StatementMetaPill(text: "\(sortedSnapshots.count) snapshot\(sortedSnapshots.count == 1 ? "" : "s")")
+                    }
+                }
+
+                if sortedSnapshots.isEmpty {
+                    Text(emptyText)
+                        .typography(.small)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            FinancialMetricHeaderRow(snapshots: sortedSnapshots)
+                            Divider()
+
+                            ForEach(visibleEntries) { entry in
+                                FinancialMetricRow(
+                                    entry: entry,
+                                    snapshots: sortedSnapshots
+                                )
+                                Divider()
+                            }
+                        }
+                        .frame(minWidth: financialStatementTableMinWidth(statementCount: sortedSnapshots.count), alignment: .leading)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct FinancialMetricHeaderRow: View {
+    let snapshots: [StockFinancialMetricSnapshot]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text("Metric")
+                .typography(.caption, weight: .semibold)
+                .foregroundStyle(.secondary)
+                .frame(width: 190, alignment: .leading)
+
+            ForEach(snapshots) { snapshot in
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(snapshot.displayColumnTitle)
+                        .typography(.caption, weight: .semibold)
+                        .foregroundStyle(.secondary)
+
+                    Text(snapshot.formattedDate)
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 146, alignment: .trailing)
+                .padding(.vertical, 10)
+            }
+        }
+    }
+}
+
+private struct FinancialMetricRow: View {
+    let entry: StockFinancialMetricEntry
+    let snapshots: [StockFinancialMetricSnapshot]
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text(entry.title)
+                .typography(.nano, weight: .semibold)
+                .foregroundStyle(.primary)
+                .frame(width: 190, alignment: .leading)
+                .padding(.vertical, 10)
+
+            ForEach(Array(snapshots.enumerated()), id: \.element.id) { index, snapshot in
+                let valueText = snapshot.entries.first(where: { $0.id == entry.id }).map {
+                    formattedFinancialMetricValue($0, currencyCode: snapshot.reportedCurrency)
+                } ?? "—"
+
+                Text(valueText)
+                    .typography(.nano, weight: .semibold)
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                    .frame(width: 146, alignment: .trailing)
+                    .padding(.vertical, 10)
+                    .background(
+                        index == 0
+                            ? AppTheme.Colors.tint(for: colorScheme).opacity(0.08)
+                            : Color.clear
+                    )
+            }
+        }
     }
 }
 
@@ -644,6 +1050,267 @@ private struct StockSessionRangeBar: View {
     }
 }
 
+private struct StockBasicFinancialsCard: View {
+    let financials: StockBasicFinancials
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+    ]
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Basic financials")
+                        .typography(.small, weight: .semibold)
+
+                    Text("Core valuation, profitability, balance-sheet, and 52-week context for \(financials.symbol).")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+
+                if financials.overviewItems.isEmpty && financials.annualSeriesItems.isEmpty {
+                    Text("No basic financial metrics are available for this stock right now.")
+                        .typography(.small)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    if !financials.overviewItems.isEmpty {
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(financials.overviewItems) { item in
+                                BasicFinancialMetricTile(
+                                    title: item.title,
+                                    value: formattedBasicFinancialValue(
+                                        item,
+                                        currencyCode: financials.currencyCode
+                                    ),
+                                    detail: item.detail
+                                )
+                            }
+                        }
+                    }
+
+                    if !financials.annualSeriesItems.isEmpty {
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Latest annual series")
+                                .typography(.caption, weight: .semibold)
+                                .foregroundStyle(.secondary)
+
+                            LazyVGrid(columns: columns, spacing: 12) {
+                                ForEach(financials.annualSeriesItems) { item in
+                                    BasicFinancialMetricTile(
+                                        title: item.title,
+                                        value: formattedBasicFinancialValue(
+                                            item,
+                                            currencyCode: financials.currencyCode
+                                        ),
+                                        detail: item.detail
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct StockConsensusCard: View {
+    let consensus: StockAnalystConsensus
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var totalRatingsText: String {
+        "\(consensus.totalRatings)"
+    }
+
+    private var bullishShareText: String {
+        percentText(consensus.bullishShare)
+    }
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Consensus")
+                        .typography(.small, weight: .semibold)
+
+                    Text("Analyst recommendation mix for \(consensus.symbol), based on the wrapped grades-consensus market data endpoint.")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 10) {
+                    HeroMetricPill(
+                        title: "Consensus",
+                        value: consensus.consensus,
+                        tint: consensusTint(for: consensus.consensus, colorScheme: colorScheme)
+                    )
+                    HeroMetricPill(
+                        title: "Ratings",
+                        value: totalRatingsText,
+                        tint: AppTheme.Colors.secondaryTint(for: colorScheme)
+                    )
+                    HeroMetricPill(
+                        title: "Bullish",
+                        value: bullishShareText,
+                        tint: AppTheme.Colors.success
+                    )
+                }
+
+                VStack(spacing: 12) {
+                    ForEach(consensus.buckets) { bucket in
+                        ConsensusDistributionRow(
+                            title: bucket.kind.title,
+                            count: bucket.count,
+                            total: consensus.totalRatings,
+                            tint: consensusBucketTint(for: bucket.kind, colorScheme: colorScheme)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct StockConsensusPlaceholderCard: View {
+    let message: String?
+    let isWarning: Bool
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 10) {
+                if isWarning {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(AppTheme.Colors.warning)
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Consensus")
+                                .typography(.small, weight: .semibold)
+
+                            Text(message ?? "Analyst consensus is limited by the current data plan.")
+                                .typography(.small)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                } else {
+                    Text("Consensus")
+                        .typography(.small, weight: .semibold)
+
+                    Text("This section is ready for analyst recommendation trends once the wrapped endpoint is available.")
+                        .typography(.small)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+}
+
+private struct ConsensusDistributionRow: View {
+    let title: String
+    let count: Int
+    let total: Int
+    let tint: Color
+
+    private var progress: Double {
+        guard total > 0 else { return 0 }
+        return Double(count) / Double(total)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(title)
+                    .typography(.caption, weight: .semibold)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                Text("\(count)")
+                    .typography(.caption, weight: .semibold)
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+
+                Text(percentText(progress))
+                    .typography(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 48, alignment: .trailing)
+                    .monospacedDigit()
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.12))
+                        .frame(height: 10)
+
+                    Capsule()
+                        .fill(tint)
+                        .frame(
+                            width: count == 0 ? 0 : max(12, proxy.size.width * progress),
+                            height: 10
+                        )
+                }
+            }
+            .frame(height: 10)
+        }
+    }
+}
+
+private struct StockBasicFinancialsPlaceholderCard: View {
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Basic financials")
+                    .typography(.small, weight: .semibold)
+
+                Text("This section is ready for P/E, margins, current ratio, beta, 52-week range, and annual series once the wrapped endpoint is available.")
+                    .typography(.small)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+}
+
+private struct BasicFinancialMetricTile: View {
+    let title: String
+    let value: String
+    let detail: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .typography(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .typography(.small, weight: .semibold)
+                .foregroundStyle(.primary)
+                .monospacedDigit()
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let detail, !detail.isEmpty {
+                Text(detail)
+                    .typography(.nano)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
 private struct StockCurrentMetricsCard: View {
     let profile: StockComparisonProfile
 
@@ -686,6 +1353,42 @@ private struct StockCurrentMetricsCard: View {
                     if index < keyMetrics.count - 1 {
                         Divider()
                     }
+                }
+            }
+        }
+    }
+}
+
+private struct StockAnalysisPlaceholderCard: View {
+    let message: String?
+    let isWarning: Bool
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 10) {
+                if isWarning {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(AppTheme.Colors.warning)
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Current metrics")
+                                .typography(.small, weight: .semibold)
+
+                            Text(message ?? "Current metrics are limited by the current data plan.")
+                                .typography(.small)
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                } else {
+                    Text("Current metrics")
+                        .typography(.small, weight: .semibold)
+
+                    Text("This section is ready for the wrapped analysis endpoint once data is available for this symbol.")
+                        .typography(.small)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
@@ -1713,8 +2416,8 @@ private func percentText(_ value: Double?) -> String {
     return value.formatted(.percent.precision(.fractionLength(1)))
 }
 
-private func multipleText(_ value: Double) -> String {
-    value.formatted(.number.precision(.fractionLength(1))) + "x"
+private func multipleText(_ value: Double, decimals: Int = 1) -> String {
+    value.formatted(.number.precision(.fractionLength(decimals))) + "x"
 }
 
 private func signedCurrencyText(_ value: Double) -> String {
@@ -1725,4 +2428,129 @@ private func signedCurrencyText(_ value: Double) -> String {
 private func signedPercentText(_ value: Double) -> String {
     let prefix = value >= 0 ? "+" : "-"
     return prefix + percentText(abs(value))
+}
+
+private func consensusTint(for consensus: String, colorScheme: ColorScheme) -> Color {
+    switch consensus.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case "strong buy":
+        return AppTheme.Colors.success
+    case "buy":
+        return AppTheme.Colors.tint(for: colorScheme)
+    case "hold":
+        return AppTheme.Colors.warning
+    case "sell", "strong sell":
+        return AppTheme.Colors.danger
+    default:
+        return AppTheme.Colors.secondaryTint(for: colorScheme)
+    }
+}
+
+private func consensusBucketTint(
+    for kind: StockAnalystConsensusBucketKind,
+    colorScheme: ColorScheme
+) -> Color {
+    switch kind {
+    case .strongBuy:
+        return AppTheme.Colors.success
+    case .buy:
+        return AppTheme.Colors.tint(for: colorScheme)
+    case .hold:
+        return AppTheme.Colors.warning
+    case .sell:
+        return Color.orange
+    case .strongSell:
+        return AppTheme.Colors.danger
+    }
+}
+
+private func formattedBasicFinancialValue(
+    _ item: StockBasicFinancialMetricItem,
+    currencyCode: String?
+) -> String {
+    switch item.format {
+    case .price:
+        return currencyText(item.value, code: currencyCode)
+    case .multiple:
+        return multipleText(item.value)
+    case .percentFraction:
+        return percentText(item.value)
+    case .percentPoints:
+        return percentText(item.value / 100)
+    case let .plain(decimals):
+        return item.value.formatted(.number.precision(.fractionLength(decimals)))
+    case .volume:
+        return compactNumber(item.value)
+    }
+}
+
+private func formattedFinancialStatementValue(_ value: Double, currencyCode: String?) -> String {
+    compactStatementCurrency(value, code: currencyCode)
+}
+
+private func formattedFinancialMetricValue(
+    _ entry: StockFinancialMetricEntry,
+    currencyCode: String?
+) -> String {
+    guard let value = entry.value else { return "—" }
+
+    switch entry.format {
+    case .currencyCompact:
+        return compactStatementCurrency(value, code: currencyCode)
+    case let .currency(decimals):
+        return currencyText(value, code: currencyCode, decimals: decimals)
+    case let .multiple(decimals):
+        return multipleText(value, decimals: decimals)
+    case .percentFraction:
+        return percentText(value)
+    case let .plain(decimals):
+        return value.formatted(.number.precision(.fractionLength(decimals)))
+    case .count:
+        return value.formatted(.number.precision(.fractionLength(0)))
+    }
+}
+
+private func currencyText(_ value: Double, code: String?, decimals: Int = 2) -> String {
+    guard let code, !code.isEmpty else {
+        return value.formatted(
+            .currency(code: "USD")
+                .precision(.fractionLength(decimals))
+        )
+    }
+
+    return value.formatted(
+        .currency(code: code)
+            .precision(.fractionLength(decimals))
+    )
+}
+
+private func compactStatementCurrency(_ value: Double, code: String?) -> String {
+    let absolute = abs(value)
+    let prefix = value < 0 ? "-" : ""
+    let normalizedCode = code?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    let currencyPrefix = (normalizedCode == nil || normalizedCode == "USD") ? "$" : "\(normalizedCode!) "
+
+    switch absolute {
+    case 1_000_000_000_000...:
+        return prefix + currencyPrefix + scaledNumberText(absolute / 1_000_000_000_000, decimals: 2) + "T"
+    case 1_000_000_000...:
+        return prefix + currencyPrefix + scaledNumberText(absolute / 1_000_000_000, decimals: 1) + "B"
+    case 1_000_000...:
+        return prefix + currencyPrefix + scaledNumberText(absolute / 1_000_000, decimals: 1) + "M"
+    default:
+        if let normalizedCode, !normalizedCode.isEmpty {
+            return value.formatted(
+                .currency(code: normalizedCode)
+                    .precision(.fractionLength(0))
+            )
+        }
+        return value.currency
+    }
+}
+
+private func scaledNumberText(_ value: Double, decimals: Int) -> String {
+    value.formatted(.number.precision(.fractionLength(decimals)))
+}
+
+private func financialStatementTableMinWidth(statementCount: Int) -> CGFloat {
+    CGFloat(190 + max(1, statementCount) * 146)
 }
