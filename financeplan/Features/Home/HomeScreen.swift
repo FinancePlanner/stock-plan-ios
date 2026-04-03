@@ -1,20 +1,23 @@
 import Charts
 import Combine
 import Foundation
+import StoreKit
 import SwiftUI
 
 private enum HomeTab: Hashable {
   case dashboard
   case portfolio
   case expenses
+  case crypto
   case reports
-  case settings
 }
 
 private enum PortfolioSegment: String, CaseIterable, Identifiable {
   case holdings
   case allocation
   case watchlist
+  case earnings
+  case news
 
   var id: String { rawValue }
 
@@ -26,6 +29,10 @@ private enum PortfolioSegment: String, CaseIterable, Identifiable {
       "Allocation"
     case .watchlist:
       "Watchlist"
+    case .earnings:
+      "Earnings"
+    case .news:
+      "News"
     }
   }
 }
@@ -36,17 +43,18 @@ struct HomeScreen: View {
 
   @Environment(\.colorScheme) private var colorScheme
   @State private var selectedTab: HomeTab = .dashboard
+  @State private var isSettingsPresented = false
   @StateObject private var budgetPlannerViewModel = BudgetPlannerViewModel()
 
   var body: some View {
     TabView(selection: $selectedTab) {
-      DashboardRoot(selectedTab: $selectedTab)
+      DashboardRoot(selectedTab: $selectedTab, isSettingsPresented: $isSettingsPresented)
         .tabItem {
           Label("Home", systemImage: "house")
         }
         .tag(HomeTab.dashboard)
 
-      PortfolioRoot()
+      PortfolioRoot(isSettingsPresented: $isSettingsPresented)
         .tabItem {
           Label("Portfolio", systemImage: "chart.line.uptrend.xyaxis")
         }
@@ -58,30 +66,35 @@ struct HomeScreen: View {
         }
         .tag(HomeTab.expenses)
 
+      Color.clear
+        .tabItem {
+          Label("Crypto", systemImage: "bitcoinsign.circle")
+        }
+        .tag(HomeTab.crypto)
+        .disabled(true)
+
       ExpensesComparisonScreen(viewModel: budgetPlannerViewModel)
         .tabItem {
           Label("Reports", systemImage: "chart.bar.xaxis")
         }
         .tag(HomeTab.reports)
-
-      NavigationStack {
-        SettingsDetailView(onLogout: onLogout)
-      }
-      .tabItem {
-        Label("Settings", systemImage: "gearshape")
-      }
-      .tag(HomeTab.settings)
     }
     .tint(AppTheme.Colors.tint(for: colorScheme))
     .toolbarBackground(.visible, for: .tabBar)
     .toolbarBackground(AppTheme.Colors.tabBarBackground(for: colorScheme), for: .tabBar)
     .animation(.snappy(duration: 0.28), value: selectedTab)
+    .sheet(isPresented: $isSettingsPresented) {
+      NavigationStack {
+        SettingsDetailView(onLogout: onLogout)
+      }
+    }
   }
 }
 
 @MainActor
 private struct DashboardRoot: View {
   @Binding var selectedTab: HomeTab
+  @Binding var isSettingsPresented: Bool
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var searchViewModel = AssetSearchViewModel()
   @State private var isProfilePresented = false
@@ -138,7 +151,18 @@ private struct DashboardRoot: View {
       .navigationTitle(greetingText)
       .navigationBarTitleDisplayMode(.large)
       .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+          Button {
+            isSettingsPresented = true
+          } label: {
+            Image(systemName: "gearshape")
+              .font(.system(size: 16, weight: .semibold))
+              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+              .padding(6)
+              .appGlassEffect(.capsule)
+          }
+          .accessibilityLabel("Open settings")
+
           AppTopBarProfileButton(
             isUserMenuPresented: isProfilePresented,
             onTap: { isProfilePresented = true }
@@ -165,6 +189,7 @@ private struct DashboardRoot: View {
 }
 
 private struct PortfolioRoot: View {
+  @Binding var isSettingsPresented: Bool
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var portfolioViewModel = PortfolioViewModel()
   @State private var selectedSegment: PortfolioSegment = .holdings
@@ -187,13 +212,14 @@ private struct PortfolioRoot: View {
           switch selectedSegment {
           case .holdings:
             PortfolioScreen()
-              .matchedGeometryEffect(id: "portfolio.segment.content", in: segmentContentNamespace)
           case .allocation:
             PortfolioAllocationScreen()
-              .matchedGeometryEffect(id: "portfolio.segment.content", in: segmentContentNamespace)
           case .watchlist:
             WatchlistTab()
-              .matchedGeometryEffect(id: "portfolio.segment.content", in: segmentContentNamespace)
+          case .earnings:
+            EarningsCalendarScreen()
+          case .news:
+            MarketNewsScreen()
           }
         }
         .animation(.snappy(duration: 0.24), value: selectedSegment)
@@ -206,7 +232,18 @@ private struct PortfolioRoot: View {
         await portfolioViewModel.load()
       }
       .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+          Button {
+            isSettingsPresented = true
+          } label: {
+            Image(systemName: "gearshape")
+              .font(.system(size: 16, weight: .semibold))
+              .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+              .padding(6)
+              .appGlassEffect(.capsule)
+          }
+          .accessibilityLabel("Open settings")
+
           AppTopBarProfileButton(
             isUserMenuPresented: isProfilePresented,
             onTap: { isProfilePresented = true }
@@ -226,7 +263,9 @@ private struct SettingsDetailView: View {
   let onLogout: () async -> Void
 
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.requestReview) private var requestReview
   @State private var isLoggingOut = false
+  @State private var isFeedbackPresented = false
   @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system
     .rawValue
 
@@ -308,7 +347,39 @@ private struct SettingsDetailView: View {
 
       Section("Support") {
         Label("Help & Support", systemImage: "questionmark.circle")
+
+        Button {
+          isFeedbackPresented = true
+        } label: {
+          Label("Share Feedback", systemImage: "quote.bubble")
+        }
+        .foregroundStyle(.primary)
+
+        Button {
+          requestReview()
+        } label: {
+          Label("Leave a review", systemImage: "star.fill")
+        }
+        .foregroundStyle(.primary)
+
         Label("About Norviqa", systemImage: "info.circle")
+      }
+
+      Section("Connect") {
+        Link(destination: URL(string: "mailto:support@norviqa.com")!) {
+          Label("Email Support", systemImage: "envelope")
+        }
+        .foregroundStyle(.primary)
+
+        Link(destination: URL(string: "https://discord.gg/norviqa")!) {
+          Label("Join Discord", systemImage: "bubble.left.and.bubble.right")
+        }
+        .foregroundStyle(.primary)
+
+        Link(destination: URL(string: "https://x.com/norviqa")!) {
+          Label("Follow on X", systemImage: "x.circle")
+        }
+        .foregroundStyle(.primary)
       }
 
       Section {
@@ -338,6 +409,9 @@ private struct SettingsDetailView: View {
     .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
     .navigationTitle("Settings")
     .navigationBarTitleDisplayMode(.large)
+    .sheet(isPresented: $isFeedbackPresented) {
+      FeedbackSheet()
+    }
   }
 
   private var appAppearanceBinding: Binding<AppAppearance> {

@@ -6,6 +6,7 @@
 //
 import Factory
 import StockPlanShared
+import StoreKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -18,39 +19,240 @@ struct OnboardingImportFlow: View {
   var body: some View {
     Group {
       switch viewModel.step {
-      case .chooseMethod:
-        InitialStockImportScreen(
-          onImportCompleted: { method in viewModel.select(method) },
+      case .mainMenu:
+        OnboardingMainMenu(
+          onSelectStocks: { viewModel.startStockImport() },
           onSignOut: {
-            Task {
-              await onSignOut()
-            }
+            Task { await onSignOut() }
           },
+          onSkip: onFinished
+        )
+      case .chooseStockMethod:
+        InitialStockImportScreen(
+          onImportCompleted: { method in viewModel.selectStockMethod(method) },
+          onSignOut: {
+            Task { await onSignOut() }
+          },
+          onBack: { viewModel.backToMain() },
           headerNamespace: headerNS
         )
       case .csv:
         CSVImportScreen(
           headerNamespace: headerNS,
-          onBack: { viewModel.backToChoose() },
+          onBack: { viewModel.backToChooseStock() },
           onDone: { _ in viewModel.finish() }
         )
       case .manual:
         ManualImportScreen(
           headerNamespace: headerNS,
-          onBack: { viewModel.backToChoose() },
+          onBack: { viewModel.backToChooseStock() },
           onDone: { _ in viewModel.finish() }
         )
       case .api:
         APIKeyImportScreen(
           headerNamespace: headerNS,
-          onBack: { viewModel.backToChoose() },
+          onBack: { viewModel.backToChooseStock() },
           onDone: { viewModel.finish() }
+        )
+      case .success:
+        SuccessImportScreen(
+          onDone: { viewModel.complete() }
         )
       case .done:
         Color.clear.onAppear(perform: onFinished)
       }
     }
     .animation(.spring(response: 0.5, dampingFraction: 0.85), value: viewModel.step)
+  }
+}
+
+// MARK: - MAIN MENU
+
+struct OnboardingMainMenu: View {
+  @Environment(\.requestReview) private var requestReview
+  @Environment(\.colorScheme) private var colorScheme
+  
+  let onSelectStocks: () -> Void
+  let onSignOut: () -> Void
+  let onSkip: () -> Void
+
+  var body: some View {
+    VStack(spacing: 32) {
+      VStack(spacing: 12) {
+        Text("Welcome to Norviqa")
+          .typography(.hero, weight: .bold)
+        
+        Text("How would you like to start building your workspace?")
+          .typography(.label)
+          .foregroundStyle(.secondary)
+          .multilineTextAlignment(.center)
+          .padding(.horizontal, 40)
+      }
+      .padding(.top, 60)
+
+      VStack(spacing: 16) {
+        OnboardingMenuButton(
+          title: "Import Stocks",
+          subtitle: "Connect accounts or upload CSVs",
+          icon: "chart.line.uptrend.xyaxis",
+          color: .blue,
+          action: onSelectStocks
+        )
+
+        OnboardingMenuButton(
+          title: "Import Expenses",
+          subtitle: "Track your spending and budget",
+          icon: "creditcard.fill",
+          color: .orange,
+          action: { /* Soon */ }
+        )
+
+        OnboardingMenuButton(
+          title: "Crypto Assets",
+          subtitle: "Sync wallets and exchange data",
+          icon: "bitcoinsign.circle.fill",
+          color: .purple,
+          action: { /* Soon */ }
+        )
+      }
+      .padding(.horizontal, 24)
+
+      Spacer()
+
+      VStack(spacing: 20) {
+        Button {
+          requestReview()
+        } label: {
+          HStack(spacing: 8) {
+            Image(systemName: "star.fill")
+            Text("Enjoying the app? Leave a review")
+          }
+          .typography(.caption, weight: .semibold)
+          .foregroundStyle(.secondary)
+        }
+
+        HStack(spacing: 24) {
+          Button("Sign Out", action: onSignOut)
+            .typography(.caption, weight: .medium)
+            .foregroundStyle(.red)
+
+          Button("Skip for Now", action: onSkip)
+            .typography(.caption, weight: .medium)
+            .foregroundStyle(.secondary)
+        }
+      }
+      .padding(.bottom, 40)
+    }
+    .background(MeshGradientBackground().ignoresSafeArea())
+  }
+}
+
+private struct OnboardingMenuButton: View {
+  let title: String
+  let subtitle: String
+  let icon: String
+  let color: Color
+  let action: () -> Void
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 16) {
+        ZStack {
+          Circle()
+            .fill(color.opacity(0.15))
+            .frame(width: 48, height: 48)
+          
+          Image(systemName: icon)
+            .font(.title3.weight(.bold))
+            .foregroundStyle(color)
+        }
+
+        VStack(alignment: .leading, spacing: 2) {
+          Text(title)
+            .typography(.label, weight: .bold)
+            .foregroundStyle(.primary)
+          
+          Text(subtitle)
+            .typography(.nano)
+            .foregroundStyle(.secondary)
+        }
+
+        Spacer()
+
+        Image(systemName: "chevron.right")
+          .font(.subheadline.weight(.bold))
+          .foregroundStyle(.secondary.opacity(0.5))
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 14)
+      .appGlassEffect(.rect(cornerRadius: 20))
+    }
+    .buttonStyle(PressEffectStyle())
+  }
+}
+
+// MARK: - SUCCESS SCREEN
+
+struct SuccessImportScreen: View {
+  @Environment(\.requestReview) var requestReview
+  @Environment(\.colorScheme) private var colorScheme
+  let onDone: () -> Void
+
+  var body: some View {
+    VStack(spacing: 32) {
+      Spacer()
+
+      VStack(spacing: 24) {
+        ZStack {
+          Circle()
+            .fill(AppTheme.Colors.success.opacity(0.12))
+            .frame(width: 100, height: 100)
+
+          Image(systemName: "checkmark.seal.fill")
+            .font(.system(size: 48, weight: .bold))
+            .foregroundStyle(AppTheme.Colors.success)
+        }
+
+        VStack(spacing: 12) {
+          Text("All Set!")
+            .typography(.hero, weight: .bold)
+
+          Text("Your data has been imported. You can now explore your workspace insights.")
+            .typography(.label)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 40)
+        }
+      }
+
+      VStack(spacing: 16) {
+        Button {
+          requestReview()
+        } label: {
+          HStack(spacing: 10) {
+            Image(systemName: "star.fill")
+            Text("Leave a review")
+          }
+          .font(.headline)
+          .fontWeight(.bold)
+        }
+        .buttonStyle(GlowingButtonStyle())
+        .padding(.horizontal, 24)
+
+        Button {
+          onDone()
+        } label: {
+          Text("Go to Home")
+            .typography(.label, weight: .semibold)
+            .foregroundStyle(.secondary)
+        }
+      }
+
+      Spacer()
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(MeshGradientBackground().ignoresSafeArea())
   }
 }
 
@@ -123,13 +325,6 @@ struct APIKeyImportScreen: View {
 }
 
 // MARK: - MANUAL ENTRY
-
-struct ManualEntry: Identifiable, Equatable {
-  let id = UUID()
-  var symbol: String = ""
-  var quantity: String = ""
-  var price: String = ""
-}
 
 struct ManualImportScreen: View {
   @Environment(\.colorScheme) private var colorScheme
@@ -311,110 +506,7 @@ struct ManualImportScreen: View {
   }
 }
 
-// MARK: - Manual Entry Card
-
-private struct ManualEntryCard: View {
-  @Binding var entry: ManualEntry
-  let index: Int
-  let onDelete: () -> Void
-  @Environment(\.colorScheme) private var colorScheme
-  @FocusState private var focusedField: EntryField?
-
-  private enum EntryField { case symbol, quantity, price }
-
-  var body: some View {
-    VStack(spacing: 0) {
-      // Header row
-      HStack {
-        Text("Position \(index)")
-          .typography(.caption, weight: .semibold)
-          .foregroundStyle(.secondary)
-
-        Spacer()
-
-        Button(action: onDelete) {
-          Image(systemName: "xmark.circle.fill")
-            .font(.title3)
-            .foregroundStyle(.secondary.opacity(0.5))
-        }
-      }
-      .padding(.horizontal, 16)
-      .padding(.top, 14)
-      .padding(.bottom, 10)
-
-      // Symbol
-      HStack(spacing: 10) {
-        Image(systemName: "magnifyingglass")
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-
-        TextField("Symbol (e.g. AAPL)", text: $entry.symbol)
-          .textInputAutocapitalization(.characters)
-          .autocorrectionDisabled(true)
-          .focused($focusedField, equals: .symbol)
-          .submitLabel(.next)
-          .onSubmit { focusedField = .quantity }
-          .typography(.label, weight: .semibold)
-      }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 12)
-      .background(
-        AppTheme.Colors.elevatedCardBackground(for: colorScheme)
-          .opacity(0.6)
-      )
-
-      Divider().padding(.leading, 16).opacity(0.3)
-
-      // Quantity & Price row
-      HStack(spacing: 0) {
-        HStack(spacing: 8) {
-          Text("Qty")
-            .typography(.caption)
-            .foregroundStyle(.secondary)
-            .frame(width: 28, alignment: .leading)
-
-          TextField("0", text: $entry.quantity)
-            .keyboardType(.decimalPad)
-            .focused($focusedField, equals: .quantity)
-            .typography(.label)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-
-        Divider().frame(height: 28).opacity(0.3)
-
-        HStack(spacing: 8) {
-          Text("Price")
-            .typography(.caption)
-            .foregroundStyle(.secondary)
-            .frame(width: 36, alignment: .leading)
-
-          TextField("0.00", text: $entry.price)
-            .keyboardType(.decimalPad)
-            .focused($focusedField, equals: .price)
-            .typography(.label)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-      }
-      .background(
-        AppTheme.Colors.elevatedCardBackground(for: colorScheme)
-          .opacity(0.6)
-      )
-    }
-    .appGlassEffect(.rect(cornerRadius: 18))
-    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-  }
-}
-
 // MARK: - CSV Import
-
-struct ImportedPosition: Identifiable, Equatable {
-  let id = UUID()
-  let symbol: String
-  let quantity: Double
-  let price: Double
-}
 
 struct CSVImportScreen: View {
   @Environment(\.colorScheme) private var colorScheme
@@ -602,6 +694,102 @@ struct CSVImportScreen: View {
         viewModel.previewRows = []
       }
     }
+  }
+}
+
+// MARK: - Manual Entry Card
+
+struct ManualEntryCard: View {
+  @Binding var entry: ManualEntry
+  let index: Int
+  let onDelete: () -> Void
+  @Environment(\.colorScheme) private var colorScheme
+  @FocusState private var focusedField: EntryField?
+
+  private enum EntryField { case symbol, quantity, price }
+
+  var body: some View {
+    VStack(spacing: 0) {
+      // Header row
+      HStack {
+        Text("Position \(index)")
+          .typography(.caption, weight: .semibold)
+          .foregroundStyle(.secondary)
+
+        Spacer()
+
+        Button(action: onDelete) {
+          Image(systemName: "xmark.circle.fill")
+            .font(.title3)
+            .foregroundStyle(.secondary.opacity(0.5))
+        }
+      }
+      .padding(.horizontal, 16)
+      .padding(.top, 14)
+      .padding(.bottom, 10)
+
+      // Symbol
+      HStack(spacing: 10) {
+        Image(systemName: "magnifyingglass")
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+
+        TextField("Symbol (e.g. AAPL)", text: $entry.symbol)
+          .textInputAutocapitalization(.characters)
+          .autocorrectionDisabled(true)
+          .focused($focusedField, equals: .symbol)
+          .submitLabel(.next)
+          .onSubmit { focusedField = .quantity }
+          .typography(.label, weight: .semibold)
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+      .background(
+        AppTheme.Colors.elevatedCardBackground(for: colorScheme)
+          .opacity(0.6)
+      )
+
+      Divider().padding(.leading, 16).opacity(0.3)
+
+      // Quantity & Price row
+      HStack(spacing: 0) {
+        HStack(spacing: 8) {
+          Text("Qty")
+            .typography(.caption)
+            .foregroundStyle(.secondary)
+            .frame(width: 28, alignment: .leading)
+
+          TextField("0", text: $entry.quantity)
+            .keyboardType(.decimalPad)
+            .focused($focusedField, equals: .quantity)
+            .typography(.label)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+
+        Divider().frame(height: 28).opacity(0.3)
+
+        HStack(spacing: 8) {
+          Text("Price")
+            .typography(.caption)
+            .foregroundStyle(.secondary)
+            .frame(width: 36, alignment: .leading)
+
+          TextField("0.00", text: $entry.price)
+            .keyboardType(.decimalPad)
+            .focused($focusedField, equals: .price)
+            .typography(.label)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+      }
+      .background(
+        AppTheme.Colors.elevatedCardBackground(for: colorScheme)
+          .opacity(0.6)
+      )
+    }
+    .appGlassEffect(.rect(cornerRadius: 18))
+    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
   }
 }
 

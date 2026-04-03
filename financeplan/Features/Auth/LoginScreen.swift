@@ -552,14 +552,10 @@ private struct PulsingLogo: View {
         .frame(width: 96, height: 96)
         .scaleEffect(pulse ? 1.08 : 0.92)
 
-      // Inner fill
-      Circle()
-        .fill(AppTheme.Colors.tintSoft(for: colorScheme))
+      Image("NorviqaLogoLight")
+        .resizable()
+        .scaledToFit()
         .frame(width: 72, height: 72)
-
-      Image(systemName: "chart.line.uptrend.xyaxis")
-        .font(.system(size: 28, weight: .bold))
-        .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
     }
     .frame(width: 96, height: 96)
     .onAppear {

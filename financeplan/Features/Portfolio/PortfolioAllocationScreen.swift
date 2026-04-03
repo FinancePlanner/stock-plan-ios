@@ -4,21 +4,47 @@ import ImageIO
 import StockPlanShared
 import SwiftUI
 import UniformTypeIdentifiers
+import SwiftData
 
 @MainActor
 struct PortfolioAllocationScreen: View {
   @Environment(\.colorScheme) private var colorScheme
   @Environment(\.displayScale) private var displayScale
+  @Environment(\.modelContext) private var modelContext
   @EnvironmentObject private var viewModel: PortfolioViewModel
+  
+  @Query private var stocks: [SDPortfolioStock]
+  
   @State private var sharePayload: SharePayload?
   @State private var isShareRendering = false
 
+  private var totalValue: Double {
+    stocks.reduce(0) { $0 + ($1.shares * $1.buyPrice) }
+  }
+
+  /// Cost-basis weights by position value, largest first.
+  private var allocationSlices: [PortfolioAllocationSlice] {
+    let total = totalValue
+    guard total > 0 else { return [] }
+    return stocks
+      .map { stock in
+        let value = stock.shares * stock.buyPrice
+        return PortfolioAllocationSlice(
+          id: stock.id,
+          symbol: stock.symbol,
+          value: value,
+          percentage: (value / total) * 100
+        )
+      }
+      .sorted { $0.value > $1.value }
+  }
+
   var body: some View {
     Group {
-      if viewModel.isLoading {
+      if viewModel.isLoading && stocks.isEmpty {
         ProgressView("Loading portfolio...")
           .frame(maxWidth: .infinity, maxHeight: .infinity)
-      } else if let error = viewModel.errorMessage {
+      } else if let error = viewModel.errorMessage, stocks.isEmpty {
         ContentUnavailableView {
           Label("Unable to Load Portfolio", systemImage: "exclamationmark.triangle")
         } description: {
@@ -34,11 +60,13 @@ struct PortfolioAllocationScreen: View {
         allocationContent
       }
     }
-    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
+    .onAppear {
+        viewModel.setModelContext(modelContext)
+    }
     .refreshable { await viewModel.load() }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
-        if !viewModel.allocationSlices.isEmpty {
+        if !allocationSlices.isEmpty {
           Button {
             Task { await renderAndShare() }
           } label: {
@@ -62,7 +90,7 @@ struct PortfolioAllocationScreen: View {
 
   @ViewBuilder
   private var allocationContent: some View {
-    if viewModel.allocationSlices.isEmpty {
+    if allocationSlices.isEmpty {
       ContentUnavailableView {
         Label("No Allocation Yet", systemImage: "chart.pie.fill")
       } description: {
@@ -78,11 +106,11 @@ struct PortfolioAllocationScreen: View {
                 .typography(.small, weight: .semibold)
                 .foregroundStyle(.secondary)
 
-              Text(viewModel.totalValue.currency)
+              Text(totalValue.currency)
                 .typography(.hero, weight: .bold)
 
               Text(
-                "\(viewModel.allocationSlices.count) positions · percentages sum to how much each holding contributes to total value."
+                "\(allocationSlices.count) positions · percentages sum to how much each holding contributes to total value."
               )
               .typography(.nano)
               .foregroundStyle(.secondary)
@@ -93,13 +121,13 @@ struct PortfolioAllocationScreen: View {
           GlassCard {
             VStack(spacing: 20) {
               AllocationDonutChart(
-                slices: viewModel.allocationSlices,
+                slices: allocationSlices,
                 colorScheme: colorScheme
               )
               .frame(height: 280)
 
               VStack(alignment: .leading, spacing: 12) {
-                ForEach(Array(viewModel.allocationSlices.enumerated()), id: \.element.id) {
+                ForEach(Array(allocationSlices.enumerated()), id: \.element.id) {
                   index, slice in
                   HStack(spacing: 12) {
                     Circle()
@@ -131,13 +159,13 @@ struct PortfolioAllocationScreen: View {
   }
 
   private func renderAndShare() async {
-    guard !viewModel.allocationSlices.isEmpty else { return }
+    guard !allocationSlices.isEmpty else { return }
     isShareRendering = true
     defer { isShareRendering = false }
 
     let card = PortfolioAllocationShareCard(
-      slices: viewModel.allocationSlices,
-      totalValue: viewModel.totalValue,
+      slices: allocationSlices,
+      totalValue: totalValue,
       colorScheme: colorScheme
     )
 

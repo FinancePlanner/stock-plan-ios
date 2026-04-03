@@ -4,16 +4,22 @@ import SwiftUI
 @MainActor
 final class OnboardingImportViewModel: ObservableObject {
   enum Step: Hashable {
-    case chooseMethod
+    case mainMenu
+    case chooseStockMethod
     case csv
     case manual
     case api
+    case success
     case done
   }
 
-  @Published var step: Step = .chooseMethod
+  @Published var step: Step = .mainMenu
 
-  func select(_ method: StockImportMethod) {
+  func startStockImport() {
+    step = .chooseStockMethod
+  }
+
+  func selectStockMethod(_ method: StockImportMethod) {
     switch method {
     case .csv:
       step = .csv
@@ -24,6 +30,8 @@ final class OnboardingImportViewModel: ObservableObject {
     }
   }
 
-  func backToChoose() { step = .chooseMethod }
-  func finish() { step = .done }
+  func backToMain() { step = .mainMenu }
+  func backToChooseStock() { step = .chooseStockMethod }
+  func finish() { step = .success }
+  func complete() { step = .done }
 }

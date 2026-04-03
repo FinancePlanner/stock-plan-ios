@@ -105,6 +105,7 @@ struct StockAnalysisMetrics: Codable, Equatable {
     metrics[.ttmVsNTMRevenueGrowth] = ttmVsNTMRevenueGrowth
     metrics[.currentQuarterRevenueGrowthVsPreviousYear] = currentQuarterRevenueGrowthVsPreviousYear
     metrics[.twoYearStackExpectedRevenueGrowth] = twoYearStackExpectedRevenueGrowth
+    metrics[.dcfFairValue] = dcfBasePrice
 
     return metrics.compactMapValues { $0 }
   }

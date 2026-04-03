@@ -55,6 +55,15 @@ extension Container {
     }.singleton
   }
 
+  var feedbackService: Factory<FeedbackService> {
+    self {
+      FeedbackService(
+        environmentManager: self.appEnvironment(),
+        authSessionManager: self.authSessionManager()
+      )
+    }.singleton
+  }
+
   func reloadEnvironmentConfiguration(for _: AppEnvironment, onUpdate: @escaping () -> Void) {
     manager.reset(scope: .singleton)
     onUpdate()

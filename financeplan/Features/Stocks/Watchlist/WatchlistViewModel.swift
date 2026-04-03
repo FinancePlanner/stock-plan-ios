@@ -2,10 +2,10 @@ import Combine
 import Factory
 import Foundation
 import StockPlanShared
+import SwiftData
 
 @MainActor
 final class WatchlistViewModel: ObservableObject {
-  @Published var items: [WatchlistItemResponse] = []
   @Published var isLoading = false
   @Published var isSaving = false
   @Published var errorMessage: String?
@@ -14,13 +14,19 @@ final class WatchlistViewModel: ObservableObject {
   @Published var addWatchlistDraft = AddWatchlistDraft()
 
   private let service: StockServicing
+  private var modelContext: ModelContext?
 
-  init(service: StockServicing) {
+  init(service: StockServicing, modelContext: ModelContext? = nil) {
     self.service = service
+    self.modelContext = modelContext
   }
 
   convenience init() {
     self.init(service: Container.shared.stockService())
+  }
+
+  func setModelContext(_ context: ModelContext) {
+    self.modelContext = context
   }
 
   func load() async {
@@ -30,9 +36,38 @@ final class WatchlistViewModel: ObservableObject {
     defer { isLoading = false }
 
     do {
-      items = try await service.fetchWatchlist()
+      let remoteItems = try await service.fetchWatchlist()
+      await syncWithSwiftData(remoteItems)
     } catch {
       errorMessage = error.localizedDescription
+    }
+  }
+
+  private func syncWithSwiftData(_ remoteItems: [WatchlistItemResponse]) async {
+    guard let modelContext = modelContext else { return }
+    let remoteIds = Set(remoteItems.map { $0.id })
+
+    do {
+      let descriptor = FetchDescriptor<SDWatchlistItem>()
+      let localItems = try modelContext.fetch(descriptor)
+
+      for local in localItems {
+        if !remoteIds.contains(local.id) {
+          modelContext.delete(local)
+        }
+      }
+
+      for remote in remoteItems {
+        if let existing = localItems.first(where: { $0.id == remote.id }) {
+          existing.update(from: remote)
+        } else {
+          modelContext.insert(SDWatchlistItem(from: remote))
+        }
+      }
+
+      try modelContext.save()
+    } catch {
+      print("Failed to sync watchlist with SwiftData: \(error)")
     }
   }
 
@@ -50,7 +85,12 @@ final class WatchlistViewModel: ObservableObject {
           nextReviewAt: nil
         )
       )
-      items.insert(created, at: 0)
+      
+      if let modelContext = modelContext {
+        modelContext.insert(SDWatchlistItem(from: created))
+        try modelContext.save()
+      }
+
       addWatchlistDraft = AddWatchlistDraft()
       return nil
     } catch {
@@ -76,7 +116,12 @@ final class WatchlistViewModel: ObservableObject {
         notes: draft.notes.isEmpty ? nil : draft.notes
       )
 
-      _ = try await service.create(stock: request)
+      let saved = try await service.create(stock: request)
+      
+      // Also update SwiftData for portfolio if possible, but the Portfolio screen will sync anyway.
+      // However, we can be proactive.
+      // For now, let's just make sure the watchlist item is updated if needed or wait for its sync.
+      
       return nil
     } catch {
       return error.localizedDescription
@@ -84,13 +129,18 @@ final class WatchlistViewModel: ObservableObject {
   }
 
   func removeFromWatchlist(_ item: WatchlistItemResponse) async {
-    let old = items
-    items.removeAll { $0.id == item.id }
-
     do {
       try await service.deleteWatchlistItem(id: item.id)
+      
+      if let modelContext = modelContext {
+        let id = item.id
+        let descriptor = FetchDescriptor<SDWatchlistItem>(predicate: #Predicate { $0.id == id })
+        if let local = try modelContext.fetch(descriptor).first {
+          modelContext.delete(local)
+          try modelContext.save()
+        }
+      }
     } catch {
-      items = old
       errorMessage = error.localizedDescription
     }
   }

@@ -7,12 +7,16 @@ protocol MarketDataServicing {
   func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus
   func fetchBasicFinancials(symbol: String) async throws -> StockBasicFinancials
   func fetchAnalysisMetrics(symbol: String) async throws -> StockAnalysisMetrics
+  func fetchMarketCompare(symbols: [String]) async throws -> [StockAnalysisMetrics]
   func fetchBalanceSheetStatement(symbol: String, limit: Int?, period: String?) async throws -> [BalanceSheetStatementResponse]
   func fetchCashFlowStatement(symbol: String, limit: Int?, period: String?) async throws -> [CashFlowStatementResponse]
   func fetchRatios(symbol: String, limit: Int?, period: String?) async throws -> [RatiosResponse]
   func fetchRatiosTTM(symbol: String) async throws -> [RatiosTTMResponse]
   func fetchFinancialGrowth(symbol: String, limit: Int?, period: String?) async throws -> [FinancialGrowthResponse]
   func fetchAnalystEstimates(symbol: String, limit: Int?, period: String?) async throws -> [AnalystEstimatesResponse]
+  func fetchStockEarnings(symbol: String, limit: Int) async throws -> [EarningsEvent]
+  func fetchEarningsCalendar(from: String, to: String) async throws -> [EarningsEvent]
+  func fetchMarketNews(limit: Int?) async throws -> [StockNews]
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements
 }
 
@@ -61,6 +65,12 @@ final class MarketDataHTTPService: MarketDataServicing {
     }
   }
 
+  func fetchMarketCompare(symbols: [String]) async throws -> [StockAnalysisMetrics] {
+    try await performAuthenticated { client in
+      try await client.fetchMarketCompare(symbols: symbols)
+    }
+  }
+
   func fetchBalanceSheetStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [BalanceSheetStatementResponse] {
     try await performAuthenticated { client in
       try await client.fetchBalanceSheetStatement(symbol: symbol, limit: limit, period: period)
@@ -94,6 +104,24 @@ final class MarketDataHTTPService: MarketDataServicing {
   func fetchAnalystEstimates(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [AnalystEstimatesResponse] {
     try await performAuthenticated { client in
       try await client.fetchAnalystEstimates(symbol: symbol, limit: limit, period: period)
+    }
+  }
+
+  func fetchStockEarnings(symbol: String, limit: Int) async throws -> [EarningsEvent] {
+    try await performAuthenticated { client in
+      try await client.fetchStockEarnings(symbol: symbol, limit: limit)
+    }
+  }
+
+  func fetchEarningsCalendar(from: String, to: String) async throws -> [EarningsEvent] {
+    try await performAuthenticated { client in
+      try await client.fetchEarningsCalendar(from: from, to: to)
+    }
+  }
+
+  func fetchMarketNews(limit: Int?) async throws -> [StockNews] {
+    try await performAuthenticated { client in
+      try await client.fetchMarketNews(limit: limit)
     }
   }
 
@@ -163,6 +191,10 @@ struct MarketDataServiceStub: MarketDataServicing {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 
+  func fetchMarketCompare(symbols _: [String]) async throws -> [StockAnalysisMetrics] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
   func fetchBalanceSheetStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [BalanceSheetStatementResponse] {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
@@ -184,6 +216,18 @@ struct MarketDataServiceStub: MarketDataServicing {
   }
 
   func fetchAnalystEstimates(symbol _: String, limit _: Int?, period _: String?) async throws -> [AnalystEstimatesResponse] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchStockEarnings(symbol _: String, limit _: Int) async throws -> [EarningsEvent] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchEarningsCalendar(from _: String, to _: String) async throws -> [EarningsEvent] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchMarketNews(limit _: Int?) async throws -> [StockNews] {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 

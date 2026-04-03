@@ -81,6 +81,10 @@ struct MarketDataHTTPClient {
     try await call(GetAnalysisMetricsEndpoint(symbol: symbol))
   }
 
+  func fetchMarketCompare(symbols: [String]) async throws -> [StockAnalysisMetrics] {
+    try await call(GetMarketCompareEndpoint(symbols: symbols))
+  }
+
   func fetchBalanceSheetStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [BalanceSheetStatementResponse] {
     try await call(GetBalanceSheetStatementEndpoint(symbol: symbol, limit: limit, period: period))
   }
@@ -103,6 +107,18 @@ struct MarketDataHTTPClient {
 
   func fetchAnalystEstimates(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [AnalystEstimatesResponse] {
     try await call(GetAnalystEstimatesEndpoint(symbol: symbol, limit: limit, period: period))
+  }
+
+  func fetchStockEarnings(symbol: String, limit: Int) async throws -> [EarningsEvent] {
+    try await call(GetStockEarningsEndpoint(symbol: symbol, limit: limit))
+  }
+
+  func fetchEarningsCalendar(from: String, to: String) async throws -> [EarningsEvent] {
+    try await call(GetEarningsCalendarEndpoint(from: from, to: to))
+  }
+
+  func fetchMarketNews(limit: Int?) async throws -> [StockNews] {
+    try await call(GetGeneralMarketNewsEndpoint(limit: limit))
   }
 
   private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {

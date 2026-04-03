@@ -62,6 +62,20 @@ struct GetAnalysisMetricsEndpoint: Endpoint {
   func asParameters() throws -> Parameters { [:] }
 }
 
+struct GetMarketCompareEndpoint: Endpoint {
+  typealias Response = [StockAnalysisMetrics]
+
+  let symbols: [String]
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/compare" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    ["symbols": symbols.joined(separator: ",")]
+  }
+}
+
 struct GetBalanceSheetStatementEndpoint: Endpoint {
   typealias Response = [BalanceSheetStatementResponse]
 

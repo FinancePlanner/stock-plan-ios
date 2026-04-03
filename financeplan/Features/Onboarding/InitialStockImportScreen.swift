@@ -1,5 +1,14 @@
 import SwiftUI
 
+struct PressEffectStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+      .opacity(configuration.isPressed ? 0.9 : 1.0)
+      .animation(.easeInOut(duration: 0.12), value: configuration.isPressed)
+  }
+}
+
 enum StockImportMethod: String, CaseIterable, Identifiable {
   case csv
   case manual
@@ -52,18 +61,10 @@ enum StockImportMethod: String, CaseIterable, Identifiable {
   }
 }
 
-struct PressEffectStyle: ButtonStyle {
-  func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-      .opacity(configuration.isPressed ? 0.9 : 1.0)
-      .animation(.easeInOut(duration: 0.12), value: configuration.isPressed)
-  }
-}
-
 struct InitialStockImportScreen: View {
   let onImportCompleted: (StockImportMethod) -> Void
   let onSignOut: () -> Void
+  let onBack: () -> Void
   @Environment(\.colorScheme) private var colorScheme
   let headerNamespace: Namespace.ID?
 
@@ -76,42 +77,59 @@ struct InitialStockImportScreen: View {
   @State private var headerVisible = false
 
   var body: some View {
-    ScrollView {
-      VStack(spacing: 0) {
-        topActions
-          .padding(.bottom, 20)
-
-        Spacer(minLength: 12)
-
-        // MARK: - Hero header
-        heroHeader
-          .padding(.bottom, 32)
-
-        // MARK: - Method cards
-        methodSelectionList
-          .padding(.bottom, 24)
-
-        // MARK: - Info message
-        if let message {
-          Text(message)
-            .typography(.small)
-            .foregroundStyle(AppTheme.Colors.success)
-            .padding(.bottom, 12)
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
+    VStack(spacing: 0) {
+      HStack {
+        Button(action: onBack) {
+          HStack(spacing: 4) {
+            Image(systemName: "chevron.left")
+              .font(.body.weight(.semibold))
+            Text("Back")
+              .typography(.label)
+          }
+          .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
         }
-
-        // MARK: - CTA
-        continueButton
-          .padding(.bottom, 40)
-
-        Spacer(minLength: 20)
+        Spacer()
       }
-      .padding(.horizontal, 24)
-      .frame(maxWidth: 520)
-      .frame(maxWidth: .infinity)
+      .padding(.horizontal, 20)
+      .padding(.top, 12)
+
+      ScrollView {
+        VStack(spacing: 0) {
+          topActions
+            .padding(.bottom, 20)
+
+          Spacer(minLength: 12)
+
+          // MARK: - Hero header
+          heroHeader
+            .padding(.bottom, 32)
+
+          // MARK: - Method cards
+          methodSelectionList
+            .padding(.bottom, 24)
+
+          // MARK: - Info message
+          if let message {
+            Text(message)
+              .typography(.small)
+              .foregroundStyle(AppTheme.Colors.success)
+              .padding(.bottom, 12)
+              .transition(.opacity.combined(with: .move(edge: .bottom)))
+          }
+
+          // MARK: - CTA
+          continueButton
+            .padding(.bottom, 40)
+
+          Spacer(minLength: 20)
+        }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: 520)
+        .frame(maxWidth: .infinity)
+      }
+      .scrollBounceBehavior(.basedOnSize)
+      .accessibilityIdentifier("initialStockImportScreen")
     }
-    .scrollBounceBehavior(.basedOnSize)
-    .accessibilityIdentifier("initialStockImportScreen")
     .background(MeshGradientBackground().ignoresSafeArea())
   }
 

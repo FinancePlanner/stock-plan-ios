@@ -608,13 +608,112 @@ final class StockDetailsViewModel: ObservableObject {
             self.primaryComparisonProfile = StockComparisonProfile(
                 symbol: primaryComparisonProfile.symbol,
                 companyName: primaryComparisonProfile.companyName,
-                currentPrice: primaryComparisonProfile.currentPrice,
-                marketCap: primaryComparisonProfile.marketCap,
-                sharesOutstanding: primaryComparisonProfile.sharesOutstanding,
+                currentPrice: metrics.currentPrice ?? primaryComparisonProfile.currentPrice,
+                marketCap: metrics.marketCap ?? primaryComparisonProfile.marketCap,
+                sharesOutstanding: metrics.sharesOutstanding ?? primaryComparisonProfile.sharesOutstanding,
                 metrics: metrics.comparisonMetrics,
-                projectionScenarios: primaryComparisonProfile.projectionScenarios
+                projectionScenarios: makeProjectionScenarios(metrics: metrics, fallback: primaryComparisonProfile.projectionScenarios),
+                dcfBasePrice: metrics.dcfBasePrice,
+                dcfBearPrice: metrics.dcfBearPrice,
+                dcfBullPrice: metrics.dcfBullPrice
             )
         }
+    }
+
+    private func makeProjectionScenarios(
+        metrics: StockAnalysisMetrics,
+        fallback: [StockProjectionScenarioKind: StockProjectionScenario]
+    ) -> [StockProjectionScenarioKind: StockProjectionScenario] {
+        guard let baseProjections = metrics.yearlyProjections,
+              let currentPrice = metrics.currentPrice,
+              let marketCap = metrics.marketCap,
+              let shares = metrics.sharesOutstanding,
+              let baseYear = metrics.baseYear,
+              !baseProjections.isEmpty else {
+            return fallback
+        }
+        
+        let peLow = max((metrics.forwardPE ?? 20) * 0.9, 8)
+        let peHigh = max((metrics.ttmPE ?? peLow) * 1.05, peLow + 1)
+        let terminalGrowthRate = metrics.terminalGrowthRate ?? 0.025
+        let terminalMargin = metrics.terminalMargin ?? 0.22
+        
+        let buildScenario = { (kind: StockProjectionScenarioKind, shift: Double, peLowShift: Double, peHighShift: Double) -> StockProjectionScenario in
+            var years: [StockProjectionYear] = []
+            
+            let ttmRev = baseProjections[0].revenue / (1 + baseProjections[0].revenueGrowth)
+            let ttmNetInc = baseProjections[0].netIncome / (1 + baseProjections[0].netIncomeGrowth)
+            
+            years.append(StockProjectionYear(
+                year: baseYear,
+                revenue: ttmRev,
+                revenueGrowth: metrics.ttmRevenueGrowth ?? 0,
+                netIncome: ttmNetInc,
+                netIncomeGrowth: metrics.ttmEPSGrowth ?? 0,
+                netMargin: metrics.netMargin ?? 0.1,
+                eps: ttmNetInc / shares,
+                peLowEstimate: peLow,
+                peHighEstimate: peHigh,
+                sharePriceLow: (ttmNetInc / shares) * peLow,
+                sharePriceHigh: (ttmNetInc / shares) * peHigh,
+                cagrLow: nil,
+                cagrHigh: nil
+            ))
+
+            var currentRev = ttmRev
+            var currentNetInc = ttmNetInc
+            let finalNetMargin = metrics.netMargin ?? 0.1
+
+            for (i, proj) in baseProjections.enumerated() {
+                let revGrowth = max(proj.revenueGrowth + shift, terminalGrowthRate)
+                let niGrowth = max(proj.netIncomeGrowth + shift, terminalGrowthRate)
+                
+                currentRev = currentRev * (1 + revGrowth)
+                currentNetInc = currentNetInc * (1 + niGrowth)
+                let targetMargin = min(finalNetMargin + Double(i + 1) * 0.02, terminalMargin)
+                let actualNetInc = currentRev * targetMargin
+                let actualEps = actualNetInc / shares
+                
+                let currentPELow = peLow + peLowShift
+                let currentPEHigh = peHigh + peHighShift
+                let priceLow = actualEps * currentPELow
+                let priceHigh = actualEps * currentPEHigh
+                
+                let yearsForward = Double(i + 1)
+                let cagrLow = pow(priceLow / currentPrice, 1.0 / yearsForward) - 1
+                let cagrHigh = pow(priceHigh / currentPrice, 1.0 / yearsForward) - 1
+
+                years.append(StockProjectionYear(
+                    year: proj.year,
+                    revenue: currentRev,
+                    revenueGrowth: revGrowth,
+                    netIncome: actualNetInc,
+                    netIncomeGrowth: niGrowth,
+                    netMargin: targetMargin,
+                    eps: actualEps,
+                    peLowEstimate: currentPELow,
+                    peHighEstimate: currentPEHigh,
+                    sharePriceLow: priceLow,
+                    sharePriceHigh: priceHigh,
+                    cagrLow: cagrLow,
+                    cagrHigh: cagrHigh
+                ))
+            }
+
+            return StockProjectionScenario(
+                kind: kind,
+                currentPrice: currentPrice,
+                marketCap: marketCap,
+                sharesOutstanding: shares,
+                years: years
+            )
+        }
+
+        return [
+            .bear: buildScenario(.bear, -0.03, -2, -2),
+            .base: buildScenario(.base, 0, 0, 0),
+            .bull: buildScenario(.bull, 0.03, 2, 2)
+        ]
     }
 
 
@@ -628,5 +727,40 @@ final class StockDetailsViewModel: ObservableObject {
 
         resolved.append(contentsOf: defaults.prefix(max(0, 2 - resolved.count)))
         selectedPeerSymbols = Array(resolved.prefix(2))
+        
+        Task {
+            await refreshComparisonMetrics()
+        }
+    }
+
+    private func refreshComparisonMetrics() async {
+        guard !selectedPeerSymbols.isEmpty else { return }
+        
+        do {
+            let metricsList = try await marketDataService.fetchMarketCompare(symbols: selectedPeerSymbols)
+            for metrics in metricsList {
+                updateUniverseProfile(with: metrics)
+            }
+        } catch {
+            print("Failed to fetch comparison metrics: \(error)")
+        }
+    }
+
+    private func updateUniverseProfile(with metrics: StockAnalysisMetrics) {
+        if let index = comparisonUniverse.firstIndex(where: { $0.symbol == metrics.symbol }) {
+            let existing = comparisonUniverse[index]
+            comparisonUniverse[index] = StockComparisonProfile(
+                symbol: existing.symbol,
+                companyName: existing.companyName,
+                currentPrice: metrics.currentPrice ?? existing.currentPrice,
+                marketCap: metrics.marketCap ?? existing.marketCap,
+                sharesOutstanding: metrics.sharesOutstanding ?? existing.sharesOutstanding,
+                metrics: metrics.comparisonMetrics,
+                projectionScenarios: makeProjectionScenarios(metrics: metrics, fallback: existing.projectionScenarios),
+                dcfBasePrice: metrics.dcfBasePrice,
+                dcfBearPrice: metrics.dcfBearPrice,
+                dcfBullPrice: metrics.dcfBullPrice
+            )
+        }
     }
 }

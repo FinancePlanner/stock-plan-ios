@@ -190,6 +190,7 @@ final class StockDetailsViewModelTests: XCTestCase {
     var fetchRatiosTTMResult: Result<[RatiosTTMResponse], Error> = .success([])
     var fetchFinancialGrowthResult: Result<[FinancialGrowthResponse], Error> = .success([])
     var fetchAnalystEstimatesResult: Result<[AnalystEstimatesResponse], Error> = .success([])
+    var fetchMarketCompareResult: Result<[StockAnalysisMetrics], Error> = .success([])
 
     func fetchCompanyProfile(symbol _: String) async throws -> CompanyProfileResponse {
       try fetchCompanyProfileResult.get()
@@ -213,8 +214,11 @@ final class StockDetailsViewModelTests: XCTestCase {
       try fetchAnalysisMetricsResult.get()
     }
 
-    func fetchBalanceSheetStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [BalanceSheetStatementResponse] {
-      try fetchBalanceSheetStatementResult.get()
+    func fetchMarketCompare(symbols _: [String]) async throws -> [StockAnalysisMetrics] {
+      try fetchMarketCompareResult.get()
+    }
+
+    func fetchBalanceSheetStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [BalanceSheetStatementResponse] {      try fetchBalanceSheetStatementResult.get()
     }
 
     func fetchCashFlowStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [CashFlowStatementResponse] {

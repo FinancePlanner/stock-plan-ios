@@ -111,6 +111,7 @@ enum StockComparisonMetric: String, CaseIterable, Identifiable {
     case ttmVsNTMRevenueGrowth
     case currentQuarterRevenueGrowthVsPreviousYear
     case twoYearStackExpectedRevenueGrowth
+    case dcfFairValue
 
     var id: String { rawValue }
 
@@ -156,6 +157,8 @@ enum StockComparisonMetric: String, CaseIterable, Identifiable {
             "Current Quarter Rev Growth vs Previous Year"
         case .twoYearStackExpectedRevenueGrowth:
             "2 Year Stack Exp Rev Growth"
+        case .dcfFairValue:
+            "DCF Fair Value (Base)"
         }
     }
 
@@ -163,7 +166,7 @@ enum StockComparisonMetric: String, CaseIterable, Identifiable {
         switch self {
         case .ttmPE, .forwardPE, .twoYearForwardPE, .ttmEPSGrowth, .currentYearExpectedEPSGrowth,
              .nextYearEPSGrowth, .ttmRevenueGrowth, .currentYearExpectedRevenueGrowth,
-             .nextYearRevenueGrowth, .grossMargin, .netMargin, .ttmPEGRatio:
+             .nextYearRevenueGrowth, .grossMargin, .netMargin, .ttmPEGRatio, .dcfFairValue:
             .mandatory
         case .lastYearEPSGrowth, .ttmVsNTMEPSGrowth, .currentQuarterEPSGrowthVsPreviousYear,
              .twoYearStackExpectedEPSGrowth, .lastYearRevenueGrowth, .ttmVsNTMRevenueGrowth,
@@ -176,6 +179,8 @@ enum StockComparisonMetric: String, CaseIterable, Identifiable {
         switch self {
         case .ttmPE, .forwardPE, .twoYearForwardPE, .ttmPEGRatio:
             .multiple
+        case .dcfFairValue:
+            .plain
         case .ttmEPSGrowth, .currentYearExpectedEPSGrowth, .nextYearEPSGrowth,
              .ttmRevenueGrowth, .currentYearExpectedRevenueGrowth, .nextYearRevenueGrowth,
              .grossMargin, .netMargin, .lastYearEPSGrowth, .ttmVsNTMEPSGrowth,
@@ -228,6 +233,8 @@ enum StockComparisonMetric: String, CaseIterable, Identifiable {
             "Many quality stocks print 5% - 15% quarterly revenue growth."
         case .twoYearStackExpectedRevenueGrowth:
             "Many quality stocks compound revenue at 10% - 22% over two years."
+        case .dcfFairValue:
+            "Intrinsic value per share using Discounted Cash Flow."
         }
     }
 }
@@ -271,6 +278,9 @@ struct StockComparisonProfile: Identifiable, Equatable {
     let sharesOutstanding: Double
     let metrics: [StockComparisonMetric: Double]
     let projectionScenarios: [StockProjectionScenarioKind: StockProjectionScenario]
+    let dcfBasePrice: Double?
+    let dcfBearPrice: Double?
+    let dcfBullPrice: Double?
 }
 
 // to fill from endpoint later
@@ -669,7 +679,10 @@ enum StockInsightsMockStore {
                 uniqueKeysWithValues: StockProjectionScenarioKind.allCases.map { kind in
                     (kind, makeScenario(from: seed, kind: kind))
                 }
-            )
+            ),
+            dcfBasePrice: nil,
+            dcfBearPrice: nil,
+            dcfBullPrice: nil
         )
     }
 

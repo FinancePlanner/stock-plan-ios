@@ -2,6 +2,7 @@ import EntityStore
 import Factory
 import Sentry
 import SwiftUI
+import SwiftData
 
 @main
 struct NorviqaApp: App {
@@ -23,5 +24,6 @@ struct NorviqaApp: App {
         .preferredColorScheme(appAppearance.colorScheme)
         .tint(AppTheme.Colors.tint(for: appAppearance.colorScheme ?? .light))
     }
+    .modelContainer(for: [SDPortfolioStock.self, SDWatchlistItem.self])
   }
 }

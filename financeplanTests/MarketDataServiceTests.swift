@@ -340,6 +340,50 @@ final class MarketDataServiceTests: XCTestCase {
     XCTAssertEqual(authSessionManager.refreshAccessTokenCalls, 0)
   }
 
+  func testFetchMarketCompare_UsesBearerTokenAndReturnsList() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = MarketDataHTTPService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/market/compare")
+      XCTAssertEqual(request.url?.query, "symbols=UBER,LYFT")
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let payload = """
+      [
+        {
+          "symbol": "UBER",
+          "ttmPE": 14.81,
+          "currentPrice": 71.84
+        },
+        {
+          "symbol": "LYFT",
+          "ttmPE": null,
+          "currentPrice": 15.20
+        }
+      ]
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (payload, response)
+    }
+
+    let response = try await service.fetchMarketCompare(symbols: ["UBER", "LYFT"])
+
+    XCTAssertEqual(response.count, 2)
+    XCTAssertEqual(response[0].symbol, "UBER")
+    XCTAssertEqual(response[1].symbol, "LYFT")
+    XCTAssertEqual(authSessionManager.validAccessTokenCalls, 1)
+  }
+
   func testFetchFinancialStatements_ReturnsMockStatementsForRequestedSymbol() async throws {
     let session = SessionMock()
     let authSessionManager = AuthSessionManagerMock()
@@ -360,5 +404,124 @@ final class MarketDataServiceTests: XCTestCase {
     XCTAssertEqual(statements.balanceSheets(for: .fy).first?.symbol, "MSFT")
     XCTAssertEqual(authSessionManager.validAccessTokenCalls, 0)
     XCTAssertEqual(authSessionManager.refreshAccessTokenCalls, 0)
+  }
+
+  func testFetchStockEarnings_UsesBearerTokenAndReturnsEvents() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = MarketDataHTTPService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/market/earnings/UBER")
+      XCTAssertEqual(request.url?.query, "limit=10")
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+
+      let payload = """
+      [
+        {
+          "symbol": "UBER",
+          "epsEstimated": 0.71,
+          "date": "2026-05-06",
+          "revenueEstimated": 13314280000
+        }
+      ]
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (payload, response)
+    }
+
+    let response = try await service.fetchStockEarnings(symbol: "UBER", limit: 10)
+
+    XCTAssertEqual(response.count, 1)
+    XCTAssertEqual(response[0].symbol, "UBER")
+    XCTAssertEqual(response[0].date, "2026-05-06")
+    XCTAssertEqual(response[0].epsEstimated, 0.71)
+  }
+
+  func testFetchEarningsCalendar_UsesBearerTokenAndReturnsEvents() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = MarketDataHTTPService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/market/earnings-calendar")
+      XCTAssertTrue(request.url?.query?.contains("from=2026-04-01") == true)
+      XCTAssertTrue(request.url?.query?.contains("to=2026-04-30") == true)
+      XCTAssertEqual(request.httpMethod, "GET")
+
+      let payload = """
+      [
+        {
+          "symbol": "TLRY",
+          "date": "2026-04-01",
+          "epsActual": -0.24,
+          "epsEstimated": -0.14
+        }
+      ]
+      """.data(using: .utf8) ?? Data()
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (payload, response)
+    }
+
+    let response = try await service.fetchEarningsCalendar(from: "2026-04-01", to: "2026-04-30")
+
+    XCTAssertEqual(response.count, 1)
+    XCTAssertEqual(response[0].symbol, "TLRY")
+    XCTAssertEqual(response[0].date, "2026-04-01")
+  }
+
+  func testFetchMarketNews_ReturnsNewsItems() async throws {
+    let session = SessionMock()
+    let authSessionManager = AuthSessionManagerMock()
+    authSessionManager.validAccessTokenResult = .success("token-123")
+    let service = MarketDataHTTPService(
+      environmentManager: AppEnvironmentManager(),
+      session: session,
+      authSessionManager: authSessionManager
+    )
+
+    session.handler = { request in
+      XCTAssertEqual(request.url?.path, "/v1/market/news/general")
+      XCTAssertEqual(request.url?.query, "limit=10")
+      
+      let payload = """
+      [
+        {
+          "title": "Market Highs",
+          "url": "https://news.com/1",
+          "date": "2026-04-03T10:00:00Z",
+          "source": "Reuters",
+          "imageURL": "https://news.com/img1.jpg"
+        }
+      ]
+      """.data(using: .utf8) ?? Data()
+      
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: try XCTUnwrap(request.url), statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (payload, response)
+    }
+
+    let news = try await service.fetchMarketNews(limit: 10)
+
+    XCTAssertEqual(news.count, 1)
+    XCTAssertEqual(news[0].title, "Market Highs")
+    // Note: Due to the bridge extension, we check values carefully in tests
+    // But direct property access works once package is refreshed
   }
 }

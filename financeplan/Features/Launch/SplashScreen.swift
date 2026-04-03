@@ -27,26 +27,22 @@ struct SplashScreen: View {
             .frame(width: 96, height: 96)
             .rotationEffect(.degrees(spin ? 360 : 0))
 
-          Circle()
-            .fill(AppTheme.Colors.splashCore)
+          Image("NorviqaLogoLight")
+            .resizable()
+            .scaledToFit()
             .frame(width: 72, height: 72)
-            .overlay(
-              Text("N")
-                .typography(.title, weight: .bold)
-                .foregroundStyle(Color(red: 0.04, green: 0.09, blue: 0.20))
-            )
         }
 
         VStack(spacing: 6) {
           Text("Norviqa")
             .typography(.hero, weight: .bold)
-            .foregroundStyle(.white)
+            .foregroundStyle(colorScheme == .dark ? .white : Color(red: 0.04, green: 0.09, blue: 0.20))
             .opacity(showText ? 1 : 0)
             .offset(y: showText ? 0 : 8)
 
           Text("Loading your workspace")
             .typography(.nano, weight: .medium)
-            .foregroundStyle(.white.opacity(0.8))
+            .foregroundStyle(colorScheme == .dark ? .white.opacity(0.8) : Color(red: 0.04, green: 0.09, blue: 0.20).opacity(0.7))
             .opacity(showText ? 1 : 0)
         }
       }

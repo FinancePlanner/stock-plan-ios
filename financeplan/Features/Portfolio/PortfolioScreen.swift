@@ -1,20 +1,38 @@
 import Combine
 import StockPlanShared
 import SwiftUI
+import SwiftData
 
 @MainActor
 struct PortfolioScreen: View {
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.modelContext) private var modelContext
   @EnvironmentObject private var viewModel: PortfolioViewModel
+
+  @Query(sort: \SDPortfolioStock.symbol) private var stocks: [SDPortfolioStock]
+
   @State private var isAddPositionPresented = false
   @State private var destructiveFeedbackTrigger = 0
 
+  private var totalValue: Double {
+    stocks.reduce(0) { $0 + ($1.shares * $1.buyPrice) }
+  }
+
+  private var totalShares: Double {
+    stocks.reduce(0) { $0 + $1.shares }
+  }
+
+  private var averagePositionValue: Double {
+    guard !stocks.isEmpty else { return 0 }
+    return totalValue / Double(stocks.count)
+  }
+
   var body: some View {
     Group {
-      if viewModel.isLoading {
+      if viewModel.isLoading && stocks.isEmpty {
         ProgressView("Loading portfolio...")
           .frame(maxWidth: .infinity, maxHeight: .infinity)
-      } else if let error = viewModel.errorMessage {
+      } else if let error = viewModel.errorMessage, stocks.isEmpty {
         ContentUnavailableView {
           Label("Unable to Load Portfolio", systemImage: "exclamationmark.triangle")
         } description: {
@@ -36,9 +54,9 @@ struct PortfolioScreen: View {
                   .foregroundStyle(.secondary)
 
                 HStack(alignment: .lastTextBaseline, spacing: 8) {
-                  Text(viewModel.totalValue.currency)
+                  Text(totalValue.currency)
                     .typography(.hero, weight: .bold)
-                  Text("\(viewModel.stocks.count) positions")
+                  Text("\(stocks.count) positions")
                     .typography(.small)
                     .foregroundStyle(.secondary)
                 }
@@ -46,12 +64,12 @@ struct PortfolioScreen: View {
                 HStack {
                   PortfolioMetricPill(
                     title: "Shares",
-                    value: viewModel.totalShares.formatted(.number.precision(.fractionLength(0...2))),
+                    value: totalShares.formatted(.number.precision(.fractionLength(0...2))),
                     tint: AppTheme.Colors.secondaryTint(for: colorScheme)
                   )
                   PortfolioMetricPill(
                     title: "Avg / position",
-                    value: viewModel.averagePositionValue.currency,
+                    value: averagePositionValue.currency,
                     tint: AppTheme.Colors.tint(for: colorScheme)
                   )
                 }
@@ -59,7 +77,7 @@ struct PortfolioScreen: View {
             }
             .foregroundStyle(.primary)
 
-            if viewModel.stocks.isEmpty {
+            if stocks.isEmpty {
               ContentUnavailableView {
                 Label("No Positions Yet", systemImage: "chart.line.uptrend.xyaxis")
               } description: {
@@ -72,7 +90,7 @@ struct PortfolioScreen: View {
               }
               .padding(.vertical, 24)
             } else {
-              ForEach(viewModel.stocks, id: \.id) { stock in
+              ForEach(stocks) { stock in
                 NavigationLink {
                   StockDetailScreen(stockId: stock.id, initialSymbol: stock.symbol)
                 } label: {
@@ -81,7 +99,14 @@ struct PortfolioScreen: View {
                 .buttonStyle(.plain)
                 .contextMenu {
                   Button("Edit", systemImage: "pencil") {
-                    viewModel.beginEdit(stock)
+                    viewModel.beginEdit(StockResponse(
+                        id: stock.id,
+                        symbol: stock.symbol,
+                        shares: stock.shares,
+                        buyPrice: stock.buyPrice,
+                        buyDate: stock.buyDate,
+                        notes: stock.notes
+                    ))
                   }
 
                   Button("Delete", systemImage: "trash", role: .destructive) {
@@ -97,7 +122,10 @@ struct PortfolioScreen: View {
         }
       }
     }
-    .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
+    .onAppear {
+        viewModel.setModelContext(modelContext)
+        Task { await viewModel.load() }
+    }
     .refreshable { await viewModel.load() }
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
@@ -152,7 +180,7 @@ struct PortfolioScreen: View {
 }
 
 private struct PortfolioRow: View {
-  let stock: StockResponse
+  let stock: SDPortfolioStock
 
   var body: some View {
     GlassCard(cornerRadius: 22) {

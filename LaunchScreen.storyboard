@@ -54,7 +54,7 @@
                             </view>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
-                        <color key="backgroundColor" red="0.058823529411764705" green="0.070588235294117646" blue="0.10196078431372549" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="backgroundColor" red="0.95" green="0.96" blue="0.98" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                         <constraints>
                             <constraint firstItem="m1r-3D-M8T" firstAttribute="centerX" secondItem="Bcu-3y-fUS" secondAttribute="centerX" id="12b-tG-0Re"/>
                             <constraint firstItem="m1r-3D-M8T" firstAttribute="centerY" secondItem="Bcu-3y-fUS" secondAttribute="centerY" id="tw4-jp-aeP"/>

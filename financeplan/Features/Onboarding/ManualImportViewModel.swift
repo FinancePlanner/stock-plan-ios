@@ -14,7 +14,7 @@ final class ManualImportViewModel: ObservableObject {
 
   func buildPositions() -> [ImportedPosition] {
     entries.compactMap { entry in
-      let symbol = entry.symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+      let symbol = entry.symbol.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).uppercased()
       guard !symbol.isEmpty else { return nil }
       let qty = Double(entry.quantity.replacingOccurrences(of: ",", with: "")) ?? 0
       let price = Double(entry.price.replacingOccurrences(of: ",", with: "")) ?? 0
@@ -23,4 +23,3 @@ final class ManualImportViewModel: ObservableObject {
     }
   }
 }
-

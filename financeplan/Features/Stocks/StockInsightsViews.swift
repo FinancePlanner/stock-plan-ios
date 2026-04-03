@@ -1,4 +1,5 @@
 import Charts
+import Factory
 import StockPlanShared
 import SwiftUI
 
@@ -284,7 +285,10 @@ struct StockAnalysisTab: View {
             marketCap: fallbackProfile.marketCap,
             sharesOutstanding: fallbackProfile.sharesOutstanding,
             metrics: analysisMetrics.comparisonMetrics,
-            projectionScenarios: fallbackProfile.projectionScenarios
+            projectionScenarios: fallbackProfile.projectionScenarios,
+            dcfBasePrice: fallbackProfile.dcfBasePrice,
+            dcfBearPrice: fallbackProfile.dcfBearPrice,
+            dcfBullPrice: fallbackProfile.dcfBullPrice
         )
     }
 
@@ -332,6 +336,17 @@ struct StockForecastTab: View {
                     scenario: scenario,
                     scenarioKind: selectedScenario
                 )
+
+                if let dcfBase = profile.dcfBasePrice,
+                   let dcfBear = profile.dcfBearPrice,
+                   let dcfBull = profile.dcfBullPrice {
+                    DCFValuationCard(
+                        basePrice: dcfBase,
+                        bearPrice: dcfBear,
+                        bullPrice: dcfBull,
+                        currentPrice: profile.currentPrice
+                    )
+                }
 
                 ProjectionTableCard(scenario: scenario)
 
@@ -433,30 +448,391 @@ struct StockCompareTab: View {
 
 struct StockNewsTab: View {
     let news: [StockNews]
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        LazyVStack(spacing: 16) {
-            StockNewsCard(news: news)
+        VStack(spacing: 24) {
+            if news.isEmpty {
+                ResearchPlaceholderCard(
+                    title: "No recent news",
+                    bodyText: "Stay tuned for updates and market shifts."
+                )
+            } else {
+                // 1. Featured Story (Text-only prominent card)
+                if let first = news.first {
+                    FeaturedNewsHero(news: first)
+                }
+
+                // 2. The Feed
+                VStack(spacing: 16) {
+                    ForEach(news.dropFirst(), id: \.url) { item in
+                        NewsFeedRow(news: item)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct FeaturedNewsHero: View {
+    let news: StockNews
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Link(destination: URL(string: news.url) ?? URL(string: "https://google.com")!) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(news.source?.uppercased() ?? "LATEST NEWS")
+                        .typography(.nano, weight: .bold)
+                        .foregroundStyle(AppTheme.Colors.secondaryTint(for: colorScheme))
+                    
+                    Spacer()
+                    
+                    Image(systemName: "newspaper.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary.opacity(0.5))
+                }
+                
+                Text(news.title)
+                    .typography(.label, weight: .bold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+
+                if let summary = news.summary, !summary.isEmpty {
+                    Text(summary)
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(4)
+                        .multilineTextAlignment(.leading)
+                }
+                
+                HStack {
+                    Text(formatRelativeDate(news.date))
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 4) {
+                        Text("Read full article")
+                            .typography(.nano, weight: .semibold)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 8, weight: .bold))
+                    }
+                    .foregroundStyle(AppTheme.Colors.tint(for: colorScheme))
+                }
+                .padding(.top, 4)
+            }
+            .padding(20)
+            .appGlassEffect(.rect(cornerRadius: 24))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func formatRelativeDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = formatter.date(from: dateString) else { return dateString }
+        
+        let now = Date()
+        let diff = now.timeIntervalSince(date)
+        
+        if diff < 60 {
+            return "Just now"
+        } else if diff < 3600 {
+            return "\(Int(diff / 60))m ago"
+        } else if diff < 86400 {
+            return "\(Int(diff / 3600))h ago"
+        } else {
+            let days = Int(diff / 86400)
+            return "\(days)d ago"
+        }
+    }
+}
+
+private struct NewsFeedRow: View {
+    let news: StockNews
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Link(destination: URL(string: news.url) ?? URL(string: "https://google.com")!) {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        Text(news.source ?? "Source")
+                            .typography(.nano, weight: .bold)
+                            .foregroundStyle(.secondary)
+                        
+                        Circle()
+                            .fill(.secondary.opacity(0.5))
+                            .frame(width: 3, height: 3)
+                        
+                        Text(formatRelativeDate(news.date))
+                            .typography(.nano)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text(news.title)
+                        .typography(.small, weight: .semibold)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+
+                    if let summary = news.summary, !summary.isEmpty {
+                        Text(summary)
+                            .typography(.nano)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+
+                Spacer()
+
+                // Thumbnail
+                AsyncImage(url: URL(string: news.imageURL ?? "")) { image in
+                    image.resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(AppTheme.Colors.tertiaryFill(for: colorScheme))
+                        .overlay(Image(systemName: "photo").font(.caption).foregroundStyle(.secondary))
+                }
+                .frame(width: 60, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .padding(12)
+            .appGlassEffect(.rect(cornerRadius: 20))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func formatRelativeDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = formatter.date(from: dateString) else { return dateString }
+        
+        let now = Date()
+        let diff = now.timeIntervalSince(date)
+        
+        if diff < 60 {
+            return "Just now"
+        } else if diff < 3600 {
+            return "\(Int(diff / 60))m ago"
+        } else if diff < 86400 {
+            return "\(Int(diff / 3600))h ago"
+        } else {
+            let days = Int(diff / 86400)
+            return "\(days)d ago"
         }
     }
 }
 
 struct StockEarningsTab: View {
     let symbol: String
+    @Environment(\.colorScheme) private var colorScheme
+    private var marketDataService: any MarketDataServicing { Container.shared.marketDataService() }
+    @State private var earnings: [EarningsEvent] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
 
     var body: some View {
-        LazyVStack(spacing: 16) {
-            // to fill from endpoint later
-            ResearchPlaceholderCard(
-                title: "Upcoming earnings (Soon)",
-                bodyText: "Wire the earnings endpoint here for next report date, consensus estimates, prior-quarter result, and surprise tracking for \(symbol)."
-            )
+        VStack(spacing: 24) {
+            if isLoading && earnings.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+            } else if let errorMessage {
+                ResearchPlaceholderCard(title: "Earnings error", bodyText: errorMessage)
+            } else if earnings.isEmpty {
+                ResearchPlaceholderCard(title: "No earnings data", bodyText: "No data found for \(symbol).")
+            } else {
+                // 1. EPS Surprise Chart
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("EPS Surprise")
+                        .typography(.label, weight: .bold)
+                        .padding(.horizontal, 4)
+                    
+                    EarningsSurpriseChart(earnings: earnings)
+                        .frame(height: 200)
+                        .padding()
+                        .appGlassEffect(.rect(cornerRadius: 24))
+                }
 
-            // to fill from endpoint later
-            ResearchPlaceholderCard(
-                title: "Text and voice",
-                bodyText: "Wire transcript text, management commentary, and voice playback here once the earnings endpoint is available."
-            )
+                // 2. History Timeline
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("History")
+                        .typography(.label, weight: .bold)
+                        .padding(.horizontal, 4)
+                    
+                    VStack(spacing: 0) {
+                        ForEach(Array(earnings.enumerated()), id: \.element.id) { index, event in
+                            EarningsTimelineRow(
+                                event: event,
+                                isLast: index == earnings.count - 1
+                            )
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .appGlassEffect(.rect(cornerRadius: 24))
+                }
+            }
+        }
+        .task {
+            await loadEarnings()
+        }
+    }
+
+    private func loadEarnings() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            let results = try await marketDataService.fetchStockEarnings(symbol: symbol, limit: 8)
+            // Sort by date descending
+            self.earnings = results.sorted { $0.date > $1.date }
+        } catch {
+            self.errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+}
+
+// MARK: - Components
+
+private struct EarningsSurpriseChart: View {
+    let earnings: [EarningsEvent]
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Chart {
+            ForEach(earnings.reversed()) { event in
+                if let est = event.epsEstimated {
+                    // Estimated Point
+                    PointMark(
+                        x: .value("Date", formatShortDate(event.date)),
+                        y: .value("EPS", est)
+                    )
+                    .foregroundStyle(.secondary)
+                    .symbol {
+                        Circle()
+                            .strokeBorder(.secondary, lineWidth: 2)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+
+                if let act = event.epsActual {
+                    // Actual Bar
+                    BarMark(
+                        x: .value("Date", formatShortDate(event.date)),
+                        y: .value("EPS", act),
+                        width: 12
+                    )
+                    .foregroundStyle(
+                        (act >= (event.epsEstimated ?? 0)) ? Color.green.gradient : Color.red.gradient
+                    )
+                    .cornerRadius(4)
+                }
+            }
+        }
+        .chartYAxis {
+            AxisMarks(position: .leading)
+        }
+        .chartXAxis {
+            AxisMarks(values: .automatic)
+        }
+    }
+
+    private func formatShortDate(_ dateString: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        if let date = formatter.date(from: dateString) {
+            formatter.dateFormat = "MMM yy"
+            return formatter.string(from: date)
+        }
+        return dateString
+    }
+}
+
+private struct EarningsTimelineRow: View {
+    let event: EarningsEvent
+    let isLast: Bool
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            // Indicator
+            VStack(spacing: 0) {
+                Circle()
+                    .fill(statusColor.gradient)
+                    .frame(width: 12, height: 12)
+                    .padding(.top, 4)
+                
+                if !isLast {
+                    Rectangle()
+                        .fill(.secondary.opacity(0.2))
+                        .frame(width: 2)
+                        .frame(maxHeight: .infinity)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(event.date)
+                            .typography(.caption, weight: .bold)
+                        Text(surpriseText)
+                            .typography(.nano)
+                            .foregroundStyle(statusColor)
+                    }
+                    
+                    Spacer()
+                    
+                    if let act = event.epsActual {
+                        Text(act.formatted(.number.precision(.fractionLength(2))))
+                            .typography(.label, weight: .bold)
+                    }
+                }
+
+                HStack(spacing: 20) {
+                    TimelineMetric(title: "EST EPS", value: event.epsEstimated?.formatted() ?? "—")
+                    TimelineMetric(title: "REVENUE", value: event.revenueActual?.formatted(.number.notation(.compactName)) ?? "—")
+                }
+                
+                if !isLast {
+                    Divider()
+                        .padding(.top, 4)
+                }
+            }
+            .padding(.bottom, isLast ? 0 : 16)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private var statusColor: Color {
+        guard let act = event.epsActual, let est = event.epsEstimated else { return .secondary }
+        return act >= est ? .green : .red
+    }
+
+    private var surpriseText: String {
+        guard let act = event.epsActual, let est = event.epsEstimated else { return "Reported" }
+        let diff = act - est
+        let percent = est != 0 ? (diff / abs(est)) * 100 : 0
+        return diff >= 0 ? "+\(percent.formatted(.number.precision(.fractionLength(1))))% Beat" : "\(percent.formatted(.number.precision(.fractionLength(1))))% Miss"
+    }
+}
+
+private struct TimelineMetric: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .typography(.nano)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .typography(.caption, weight: .semibold)
         }
     }
 }
@@ -2385,6 +2761,9 @@ private func formattedMetricValue(_ metric: StockComparisonMetric, value: Double
     case .percent:
         return percentText(value)
     case .plain:
+        if metric == .dcfFairValue {
+            return value.currency
+        }
         return value.formatted(.number.precision(.fractionLength(2)))
     }
 }
@@ -2392,6 +2771,58 @@ private func formattedMetricValue(_ metric: StockComparisonMetric, value: Double
 private func projectionRangeText(for year: StockProjectionYear?) -> String {
     guard let year else { return "Pending" }
     return "\(year.sharePriceLow.currency) - \(year.sharePriceHigh.currency)"
+}
+
+struct DCFValuationCard: View {
+    let basePrice: Double
+    let bearPrice: Double
+    let bullPrice: Double
+    let currentPrice: Double
+
+    var body: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Intrinsic valuation (DCF)")
+                        .typography(.small, weight: .semibold)
+
+                    Text("Discounted cash flow (DCF) fair value estimates based on the projected explicit cash flows and the Gordon Growth terminal value.")
+                        .typography(.nano)
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 12) {
+                    dcfBlock(title: "Bear case", value: bearPrice)
+                    dcfBlock(title: "Base case", value: basePrice)
+                    dcfBlock(title: "Bull case", value: bullPrice)
+                }
+            }
+        }
+    }
+
+    private func dcfBlock(title: String, value: Double) -> some View {
+        let isUpside = value > currentPrice
+        let color: Color = isUpside ? .green : .red
+
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .typography(.caption, weight: .semibold)
+                .foregroundStyle(.secondary)
+
+            Text(value.currency)
+                .typography(.label, weight: .bold)
+
+            HStack(spacing: 2) {
+                Image(systemName: isUpside ? "arrow.up.right" : "arrow.down.right")
+                Text(percentText((value - currentPrice) / currentPrice))
+            }
+            .typography(.caption, weight: .semibold)
+            .foregroundStyle(color)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
 }
 
 private func cagrRangeText(for year: StockProjectionYear?) -> String {

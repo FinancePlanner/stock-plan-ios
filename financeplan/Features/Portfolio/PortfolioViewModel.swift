@@ -2,6 +2,7 @@ import Combine
 import Factory
 import Foundation
 import StockPlanShared
+import SwiftData
 
 struct PortfolioAllocationSlice: Identifiable, Equatable, Sendable {
   let id: String
@@ -13,7 +14,6 @@ struct PortfolioAllocationSlice: Identifiable, Equatable, Sendable {
 
 @MainActor
 final class PortfolioViewModel: ObservableObject {
-  @Published private(set) var stocks: [StockResponse] = []
   @Published var isLoading = false
   @Published var errorMessage: String?
   @Published var editingStock: StockResponse?
@@ -21,43 +21,19 @@ final class PortfolioViewModel: ObservableObject {
   @Published var isDeletingStock = false
 
   private let service: StockServicing
+  private var modelContext: ModelContext?
 
-  init(service: StockServicing) {
+  init(service: StockServicing, modelContext: ModelContext? = nil) {
     self.service = service
+    self.modelContext = modelContext
   }
 
   convenience init() {
     self.init(service: Container.shared.stockService())
   }
 
-  var totalValue: Double {
-    stocks.reduce(0) { $0 + ($1.shares * $1.buyPrice) }
-  }
-
-  var totalShares: Double {
-    stocks.reduce(0) { $0 + $1.shares }
-  }
-
-  var averagePositionValue: Double {
-    guard !stocks.isEmpty else { return 0 }
-    return totalValue / Double(stocks.count)
-  }
-
-  /// Cost-basis weights by position value, largest first.
-  var allocationSlices: [PortfolioAllocationSlice] {
-    let total = totalValue
-    guard total > 0 else { return [] }
-    return stocks
-      .map { stock in
-        let value = stock.shares * stock.buyPrice
-        return PortfolioAllocationSlice(
-          id: stock.id,
-          symbol: stock.symbol,
-          value: value,
-          percentage: (value / total) * 100
-        )
-      }
-      .sorted { $0.value > $1.value }
+  func setModelContext(_ context: ModelContext) {
+    self.modelContext = context
   }
 
   func load() async {
@@ -67,9 +43,43 @@ final class PortfolioViewModel: ObservableObject {
     defer { isLoading = false }
 
     do {
-      stocks = try await service.fetchPortfolio()
+      let remoteStocks = try await service.fetchPortfolio()
+      await syncWithSwiftData(remoteStocks)
     } catch {
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load portfolio."
+    }
+  }
+
+  private func syncWithSwiftData(_ remoteStocks: [StockResponse]) async {
+    guard let modelContext = modelContext else { return }
+
+    // Simple sync: delete all and re-insert or update existing
+    // For now, let's do a simple update/insert and delete others
+    let remoteIds = Set(remoteStocks.map { $0.id })
+    
+    do {
+        let descriptor = FetchDescriptor<SDPortfolioStock>()
+        let localStocks = try modelContext.fetch(descriptor)
+        
+        // Delete local stocks that are not in remote
+        for local in localStocks {
+            if !remoteIds.contains(local.id) {
+                modelContext.delete(local)
+            }
+        }
+        
+        // Update or insert remote stocks
+        for remote in remoteStocks {
+            if let existing = localStocks.first(where: { $0.id == remote.id }) {
+                existing.update(from: remote)
+            } else {
+                modelContext.insert(SDPortfolioStock(from: remote))
+            }
+        }
+        
+        try modelContext.save()
+    } catch {
+        print("Failed to sync with SwiftData: \(error)")
     }
   }
 
@@ -80,17 +90,22 @@ final class PortfolioViewModel: ObservableObject {
     errorMessage = nil
     defer { isDeletingStock = false }
 
-    let old = stocks
-    stocks.removeAll(where: { $0.id == id })
-
     do {
       try await service.delete(id: id)
+      
+      if let modelContext = modelContext {
+          let descriptor = FetchDescriptor<SDPortfolioStock>(predicate: #Predicate { $0.id == id })
+          if let local = try modelContext.fetch(descriptor).first {
+              modelContext.delete(local)
+              try modelContext.save()
+          }
+      }
+
       if editingStock?.id == id {
         editingStock = nil
       }
       return true
     } catch {
-      stocks = old
       errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to delete stock."
       return false
     }
@@ -108,10 +123,15 @@ final class PortfolioViewModel: ObservableObject {
     do {
       let saved = try await service.updateStock(updated)
 
-      if let idx = stocks.firstIndex(where: { $0.id == saved.id }) {
-        stocks[idx] = saved
-      } else {
-        stocks.insert(saved, at: 0)
+      if let modelContext = modelContext {
+          let id = saved.id
+          let descriptor = FetchDescriptor<SDPortfolioStock>(predicate: #Predicate { $0.id == id })
+          if let local = try modelContext.fetch(descriptor).first {
+              local.update(from: saved)
+          } else {
+              modelContext.insert(SDPortfolioStock(from: saved))
+          }
+          try modelContext.save()
       }
 
       editingStock = nil
@@ -148,10 +168,9 @@ final class PortfolioViewModel: ObservableObject {
         )
       )
 
-      if let idx = stocks.firstIndex(where: { $0.id == saved.id }) {
-        stocks[idx] = saved
-      } else {
-        stocks.insert(saved, at: 0)
+      if let modelContext = modelContext {
+          modelContext.insert(SDPortfolioStock(from: saved))
+          try modelContext.save()
       }
 
       return nil
