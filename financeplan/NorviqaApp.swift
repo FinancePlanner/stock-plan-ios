@@ -4,7 +4,7 @@ import Sentry
 import SwiftUI
 
 @main
-struct FinPlannerApp: App {
+struct NorviqaApp: App {
   @InjectedObservable(\Container.appEnvironment) var environmentManager
   @StateObject private var sessionManager = SessionManager()
   @AppStorage(AppAppearance.storageKey) private var appAppearanceRawValue = AppAppearance.system

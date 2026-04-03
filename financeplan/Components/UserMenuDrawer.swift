@@ -97,7 +97,7 @@ struct UserMenuDrawer: View {
             dismiss()
             onHelp?()
           }
-          drawerRow(icon: "info.circle", title: "About FinPlanner") {
+          drawerRow(icon: "info.circle", title: "About Norviqa") {
             dismiss()
             onAbout?()
           }

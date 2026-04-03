@@ -22,6 +22,17 @@ final class StockDetailsViewModel: ObservableObject {
         let message: String?
     }
 
+    private struct FinancialStatementsLoadResult {
+        let statements: StockFinancialStatements?
+        let message: String?
+    }
+
+    private struct FinancialStatementsSectionLoadResult<Value> {
+        let value: Value
+        let message: String?
+        let isUnsupportedPlan: Bool
+    }
+
     @Published var details: StockDetails?
     @Published var history: [StockHistory] = []
     @Published var news: [StockNews] = []
@@ -34,6 +45,7 @@ final class StockDetailsViewModel: ObservableObject {
     @Published private(set) var analysisMetrics: StockAnalysisMetrics?
     @Published private(set) var analysisMetricsMessage: String?
     @Published private(set) var financialStatements: StockFinancialStatements?
+    @Published private(set) var financialStatementsMessage: String?
     @Published private(set) var primaryComparisonProfile: StockComparisonProfile?
     @Published private(set) var comparisonUniverse: [StockComparisonProfile] = []
     @Published private(set) var selectedPeerSymbols: [String] = []
@@ -122,6 +134,7 @@ final class StockDetailsViewModel: ObservableObject {
             analysisMetrics = nil
             analysisMetricsMessage = nil
             financialStatements = nil
+            financialStatementsMessage = nil
             primaryComparisonProfile = nil
             comparisonUniverse = []
             selectedPeerSymbols = []
@@ -205,7 +218,9 @@ final class StockDetailsViewModel: ObservableObject {
             self.analysisMetrics = analysisMetricsResult.metrics
             self.analysisMetricsMessage = analysisMetricsResult.message
             applyAnalysisMetrics(analysisMetricsResult.metrics, to: symbol)
-            self.financialStatements = await financialStatementsTask
+            let financialStatementsResult = await financialStatementsTask
+            self.financialStatements = financialStatementsResult.statements
+            self.financialStatementsMessage = financialStatementsResult.message
         } catch {
             details = nil
             history = []
@@ -219,6 +234,7 @@ final class StockDetailsViewModel: ObservableObject {
             analysisMetrics = nil
             analysisMetricsMessage = nil
             financialStatements = nil
+            financialStatementsMessage = nil
             primaryComparisonProfile = nil
             comparisonUniverse = []
             selectedPeerSymbols = []
@@ -431,11 +447,146 @@ final class StockDetailsViewModel: ObservableObject {
         }
     }
 
-    private func loadFinancialStatements(symbol: String) async -> StockFinancialStatements? {
+    private func loadFinancialStatements(symbol: String) async -> FinancialStatementsLoadResult {
+        guard FMPFreeTierCoverage.isSupportedTicker(symbol) else {
+            return FinancialStatementsLoadResult(
+                statements: nil,
+                message: FMPFreeTierCoverage.unsupportedStatementsMessage(for: symbol)
+            )
+        }
+
+        async let balanceSheetsResult = loadFinancialStatementsSection(emptyValue: [BalanceSheetStatementResponse]()) {
+            try await marketDataService.fetchBalanceSheetStatement(symbol: symbol, limit: 10, period: nil)
+        }
+        async let cashFlowsResult = loadFinancialStatementsSection(emptyValue: [CashFlowStatementResponse]()) {
+            try await marketDataService.fetchCashFlowStatement(symbol: symbol, limit: 10, period: nil)
+        }
+        async let ratiosResult = loadFinancialStatementsSection(emptyValue: [RatiosResponse]()) {
+            try await marketDataService.fetchRatios(symbol: symbol, limit: 10, period: nil)
+        }
+        async let ratiosTTMResult = loadFinancialStatementsSection(emptyValue: [RatiosTTMResponse]()) {
+            try await marketDataService.fetchRatiosTTM(symbol: symbol)
+        }
+        async let growthResult = loadFinancialStatementsSection(emptyValue: [FinancialGrowthResponse]()) {
+            try await marketDataService.fetchFinancialGrowth(symbol: symbol, limit: 10, period: nil)
+        }
+        async let estimatesResult = loadFinancialStatementsSection(emptyValue: [AnalystEstimatesResponse]()) {
+            try await marketDataService.fetchAnalystEstimates(symbol: symbol, limit: 10, period: nil)
+        }
+
+        let balanceSheets = await balanceSheetsResult
+        let cashFlows = await cashFlowsResult
+        let ratios = await ratiosResult
+        let ratiosTTM = await ratiosTTMResult
+        let growth = await growthResult
+        let estimates = await estimatesResult
+
+        if [balanceSheets.isUnsupportedPlan, cashFlows.isUnsupportedPlan, ratios.isUnsupportedPlan, ratiosTTM.isUnsupportedPlan, growth.isUnsupportedPlan, estimates.isUnsupportedPlan]
+            .contains(true) {
+            return FinancialStatementsLoadResult(
+                statements: nil,
+                message: FMPFreeTierCoverage.unsupportedStatementsMessage(for: symbol)
+            )
+        }
+
+        let statements = StockFinancialStatements.from(
+            symbol: symbol,
+            balanceSheets: balanceSheets.value,
+            cashFlows: cashFlows.value,
+            ratios: ratios.value,
+            ratiosTTM: ratiosTTM.value,
+            growth: growth.value,
+            estimates: estimates.value
+        )
+
+        let hasAnyStatementsData =
+            !balanceSheets.value.isEmpty
+            || !cashFlows.value.isEmpty
+            || !ratios.value.isEmpty
+            || !ratiosTTM.value.isEmpty
+            || !growth.value.isEmpty
+            || !estimates.value.isEmpty
+
+        if hasAnyStatementsData {
+            return FinancialStatementsLoadResult(statements: statements, message: nil)
+        }
+
+        let firstErrorMessage = [
+            balanceSheets.message,
+            cashFlows.message,
+            ratios.message,
+            ratiosTTM.message,
+            growth.message,
+            estimates.message,
+        ].compactMap { $0 }.first
+
+        if let firstErrorMessage {
+            return FinancialStatementsLoadResult(statements: nil, message: firstErrorMessage)
+        }
+
+        return FinancialStatementsLoadResult(statements: statements, message: nil)
+    }
+
+    private func loadFinancialStatementsSection<Value>(
+        emptyValue: Value,
+        operation: () async throws -> Value
+    ) async -> FinancialStatementsSectionLoadResult<Value> {
         do {
-            return try await marketDataService.fetchFinancialStatements(symbol: symbol)
+            return FinancialStatementsSectionLoadResult(
+                value: try await operation(),
+                message: nil,
+                isUnsupportedPlan: false
+            )
+        } catch let error as MarketDataHTTPClient.Error {
+            let message = error.errorDescription ?? error.localizedDescription
+            if isUnsupportedStatementsError(message: message) {
+                return FinancialStatementsSectionLoadResult(
+                    value: emptyValue,
+                    message: nil,
+                    isUnsupportedPlan: true
+                )
+            }
+            if isMissingStatementsDataError(error) {
+                return FinancialStatementsSectionLoadResult(
+                    value: emptyValue,
+                    message: nil,
+                    isUnsupportedPlan: false
+                )
+            }
+            return FinancialStatementsSectionLoadResult(
+                value: emptyValue,
+                message: message,
+                isUnsupportedPlan: false
+            )
         } catch {
-            return nil
+            return FinancialStatementsSectionLoadResult(
+                value: emptyValue,
+                message: error.localizedDescription,
+                isUnsupportedPlan: false
+            )
+        }
+    }
+
+    private func isUnsupportedStatementsError(message: String) -> Bool {
+        message.localizedCaseInsensitiveContains("free-tier coverage")
+            || message.localizedCaseInsensitiveContains("premium")
+            || message.localizedCaseInsensitiveContains("subscription")
+            || message.localizedCaseInsensitiveContains("unsupported symbol")
+    }
+
+    private func isMissingStatementsDataError(_ error: MarketDataHTTPClient.Error) -> Bool {
+        switch error {
+        case .invalidStatus(404):
+            return true
+        case .invalidStatus:
+            return false
+        case let .api(message):
+            return message.localizedCaseInsensitiveContains("not found")
+                || message.localizedCaseInsensitiveContains("no data")
+                || message.localizedCaseInsensitiveContains("no financial")
+                || message.localizedCaseInsensitiveContains("no analyst estimates")
+        case .invalidResponse, .unauthorized(_):
+            return false
         }
     }
 

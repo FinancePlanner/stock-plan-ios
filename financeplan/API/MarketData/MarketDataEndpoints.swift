@@ -61,3 +61,110 @@ struct GetAnalysisMetricsEndpoint: Endpoint {
 
   func asParameters() throws -> Parameters { [:] }
 }
+
+struct GetBalanceSheetStatementEndpoint: Endpoint {
+  typealias Response = [BalanceSheetStatementResponse]
+
+  let symbol: String
+  let limit: Int?
+  let period: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/balance-sheet-statement/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let limit { params["limit"] = limit }
+    if let period { params["period"] = period }
+    return params
+  }
+}
+
+struct GetCashFlowStatementEndpoint: Endpoint {
+  typealias Response = [CashFlowStatementResponse]
+
+  let symbol: String
+  let limit: Int?
+  let period: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/cash-flow-statement/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let limit { params["limit"] = limit }
+    if let period { params["period"] = period }
+    return params
+  }
+}
+
+struct GetRatiosEndpoint: Endpoint {
+  typealias Response = [RatiosResponse]
+
+  let symbol: String
+  let limit: Int?
+  let period: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/ratios/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let limit { params["limit"] = limit }
+    if let period { params["period"] = period }
+    return params
+  }
+}
+
+struct GetRatiosTTMEndpoint: Endpoint {
+  typealias Response = [RatiosTTMResponse]
+
+  let symbol: String
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/ratios-ttm/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters { [:] }
+}
+
+struct GetFinancialGrowthEndpoint: Endpoint {
+  typealias Response = [FinancialGrowthResponse]
+
+  let symbol: String
+  let limit: Int?
+  let period: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/financial-growth/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let limit { params["limit"] = limit }
+    if let period { params["period"] = period }
+    return params
+  }
+}
+
+struct GetAnalystEstimatesEndpoint: Endpoint {
+  typealias Response = [AnalystEstimatesResponse]
+
+  let symbol: String
+  let limit: Int?
+  let period: String?
+
+  var method: HTTPMethod { .get }
+  var path: String { "/v1/market/analyst-estimates/\(symbol.uppercased())" }
+  var decoder: JSONDecoder { .stockPlanShared }
+
+  func asParameters() throws -> Parameters {
+    var params: Parameters = [:]
+    if let limit { params["limit"] = limit }
+    if let period { params["period"] = period }
+    return params
+  }
+}

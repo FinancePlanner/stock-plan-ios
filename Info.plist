@@ -15,7 +15,7 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>CFBundleDisplayName</key>
-	<string>FinPlanner</string>
+	<string>Norviqa</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -30,14 +30,14 @@
 		<false/>
 		<key>NSExceptionDomains</key>
 		<dict>
-			<key>dev-api.finplanner.io</key>
+			<key>dev-api.norviqa.io</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
 				<key>NSIncludesSubdomains</key>
 				<true/>
 			</dict>
-			<key>api.finplanner.io</key>
+			<key>api.norviqa.io</key>
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>

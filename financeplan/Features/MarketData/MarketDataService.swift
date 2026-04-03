@@ -7,6 +7,12 @@ protocol MarketDataServicing {
   func fetchAnalystConsensus(symbol: String) async throws -> StockAnalystConsensus
   func fetchBasicFinancials(symbol: String) async throws -> StockBasicFinancials
   func fetchAnalysisMetrics(symbol: String) async throws -> StockAnalysisMetrics
+  func fetchBalanceSheetStatement(symbol: String, limit: Int?, period: String?) async throws -> [BalanceSheetStatementResponse]
+  func fetchCashFlowStatement(symbol: String, limit: Int?, period: String?) async throws -> [CashFlowStatementResponse]
+  func fetchRatios(symbol: String, limit: Int?, period: String?) async throws -> [RatiosResponse]
+  func fetchRatiosTTM(symbol: String) async throws -> [RatiosTTMResponse]
+  func fetchFinancialGrowth(symbol: String, limit: Int?, period: String?) async throws -> [FinancialGrowthResponse]
+  func fetchAnalystEstimates(symbol: String, limit: Int?, period: String?) async throws -> [AnalystEstimatesResponse]
   func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements
 }
 
@@ -52,6 +58,42 @@ final class MarketDataHTTPService: MarketDataServicing {
   func fetchAnalysisMetrics(symbol: String) async throws -> StockAnalysisMetrics {
     try await performAuthenticated { client in
       try await client.fetchAnalysisMetrics(symbol: symbol)
+    }
+  }
+
+  func fetchBalanceSheetStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [BalanceSheetStatementResponse] {
+    try await performAuthenticated { client in
+      try await client.fetchBalanceSheetStatement(symbol: symbol, limit: limit, period: period)
+    }
+  }
+
+  func fetchCashFlowStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [CashFlowStatementResponse] {
+    try await performAuthenticated { client in
+      try await client.fetchCashFlowStatement(symbol: symbol, limit: limit, period: period)
+    }
+  }
+
+  func fetchRatios(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [RatiosResponse] {
+    try await performAuthenticated { client in
+      try await client.fetchRatios(symbol: symbol, limit: limit, period: period)
+    }
+  }
+
+  func fetchRatiosTTM(symbol: String) async throws -> [RatiosTTMResponse] {
+    try await performAuthenticated { client in
+      try await client.fetchRatiosTTM(symbol: symbol)
+    }
+  }
+
+  func fetchFinancialGrowth(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [FinancialGrowthResponse] {
+    try await performAuthenticated { client in
+      try await client.fetchFinancialGrowth(symbol: symbol, limit: limit, period: period)
+    }
+  }
+
+  func fetchAnalystEstimates(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [AnalystEstimatesResponse] {
+    try await performAuthenticated { client in
+      try await client.fetchAnalystEstimates(symbol: symbol, limit: limit, period: period)
     }
   }
 
@@ -118,6 +160,30 @@ struct MarketDataServiceStub: MarketDataServicing {
   }
 
   func fetchAnalysisMetrics(symbol _: String) async throws -> StockAnalysisMetrics {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchBalanceSheetStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [BalanceSheetStatementResponse] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchCashFlowStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [CashFlowStatementResponse] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchRatios(symbol _: String, limit _: Int?, period _: String?) async throws -> [RatiosResponse] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchRatiosTTM(symbol _: String) async throws -> [RatiosTTMResponse] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchFinancialGrowth(symbol _: String, limit _: Int?, period _: String?) async throws -> [FinancialGrowthResponse] {
+    throw MarketDataHTTPClient.Error.invalidStatus(404)
+  }
+
+  func fetchAnalystEstimates(symbol _: String, limit _: Int?, period _: String?) async throws -> [AnalystEstimatesResponse] {
     throw MarketDataHTTPClient.Error.invalidStatus(404)
   }
 

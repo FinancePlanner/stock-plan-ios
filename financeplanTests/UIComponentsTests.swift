@@ -31,7 +31,7 @@ final class UIComponentsTests: XCTestCase {
 
     func testAppTopBar_canBeCompiled() {
         let topBar = AppTopBar(
-            title: "FinPlanner",
+            title: "Norviqa",
             trailingAccessory: AnyView(
                 AppTopBarProfileButton(
                     isUserMenuPresented: false,

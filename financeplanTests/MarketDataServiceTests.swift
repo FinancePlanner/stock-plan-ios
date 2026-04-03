@@ -307,7 +307,21 @@ final class MarketDataServiceTests: XCTestCase {
         "lastYearRevenueGrowth": 0.07,
         "ttmVsNTMRevenueGrowth": 0.01,
         "currentQuarterRevenueGrowthVsPreviousYear": 0.06,
-        "twoYearStackExpectedRevenueGrowth": 0.24
+        "twoYearStackExpectedRevenueGrowth": 0.24,
+        "currentPrice": null,
+        "marketCap": null,
+        "sharesOutstanding": null,
+        "baseYear": null,
+        "yearlyProjections": null,
+        "wacc": null,
+        "terminalGrowthRate": null,
+        "terminalMargin": null,
+        "exitPELow": null,
+        "exitPEHigh": null,
+        "dcfBasePrice": null,
+        "dcfBearPrice": null,
+        "dcfBullPrice": null,
+        "netDebt": null
       }
       """.data(using: .utf8) ?? Data()
       let response = try XCTUnwrap(

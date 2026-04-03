@@ -18,7 +18,7 @@ financeplan/
 │   ├── Constants.swift         # Constants + environment manager
 │   ├── Container+AppFactories.swift # DI registrations
 │   ├── ContentView.swift       # Root UI composition + app flow switch
-│   └── FinPlannerApp.swift     # App entry point (@main)
+│   └── NorviqaApp.swift     # App entry point (@main)
 ├── financeplanTests/           # Unit tests
 ├── financeplanUITests/         # UI tests
 └── financeplan.xcodeproj/      # Xcode project + SwiftPM package metadata
@@ -26,13 +26,13 @@ financeplan/
 
 Notes:
 - `financeplan/Components`, `financeplan/Extensions`, and `financeplan/Services` currently exist as organizational folders but are empty.
-- `financeplan/financeplanApp.swift` exists as a second app struct but does not have `@main`; `FinPlannerApp.swift` is the active entry point.
+- `financeplan/financeplanApp.swift` exists as a second app struct but does not have `@main`; `NorviqaApp.swift` is the active entry point.
 
 ## Runtime Architecture
 
 ### 1) App entry and lifecycle
-- Entry point is `financeplan/FinPlannerApp.swift` (`@main`).
-- `FinPlannerApp` bootstraps `ContentView` and injects the shared session state.
+- Entry point is `financeplan/NorviqaApp.swift` (`@main`).
+- `NorviqaApp` bootstraps `ContentView` and injects the shared session state.
 - App lifecycle is currently managed through the SwiftUI `App` entry point only.
 
 ### 2) Dependency injection
@@ -46,7 +46,7 @@ Notes:
 ### 3) Environment/configuration
 - Environment values live in `financeplan/AppEnvironment.swift`.
 - `AppEnvironmentManager` resolves active environment in this order (`financeplan/Constants.swift`):
-  1. runtime env var `FINPLANNER_ENVIRONMENT`
+  1. runtime env var `NORVIQA_ENVIRONMENT`
   2. generated `SchemeEnvironment.value`
   3. persisted user default `environment`
   4. fallback default (`dev` in debug, `production` in release)
@@ -134,7 +134,7 @@ Primary packages currently linked to the app target:
 
 ### App configuration files
 - `Info.plist`: app metadata, ATS exceptions, DSN/key entries, UI style.
-- `financeplan/FinPlanner.entitlements`: associated domains and push entitlement.
+- `financeplan/Norviqa.entitlements`: associated domains and push entitlement.
 - `financeplan/SchemeEnvironment.swift`: generated file used in environment resolution.
 
 ## How to Build and Test

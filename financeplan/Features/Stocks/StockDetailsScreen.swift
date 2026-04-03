@@ -147,6 +147,7 @@ struct StockDetailScreen: View {
                 case .statements:
                     StockFinancialStatementsTab(
                         statements: viewModel.financialStatements,
+                        errorMessage: viewModel.financialStatementsMessage,
                         selectedPeriod: $selectedStatementPeriod
                     )
                 case .analysis:

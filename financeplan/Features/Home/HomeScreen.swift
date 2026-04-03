@@ -308,7 +308,7 @@ private struct SettingsDetailView: View {
 
       Section("Support") {
         Label("Help & Support", systemImage: "questionmark.circle")
-        Label("About FinPlanner", systemImage: "info.circle")
+        Label("About Norviqa", systemImage: "info.circle")
       }
 
       Section {

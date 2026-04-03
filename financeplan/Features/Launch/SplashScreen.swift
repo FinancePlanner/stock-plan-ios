@@ -31,14 +31,14 @@ struct SplashScreen: View {
             .fill(AppTheme.Colors.splashCore)
             .frame(width: 72, height: 72)
             .overlay(
-              Text("FP")
+              Text("N")
                 .typography(.title, weight: .bold)
                 .foregroundStyle(Color(red: 0.04, green: 0.09, blue: 0.20))
             )
         }
 
         VStack(spacing: 6) {
-          Text("FinPlanner")
+          Text("Norviqa")
             .typography(.hero, weight: .bold)
             .foregroundStyle(.white)
             .opacity(showText ? 1 : 0)

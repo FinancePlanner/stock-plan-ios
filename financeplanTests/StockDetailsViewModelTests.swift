@@ -184,7 +184,12 @@ final class StockDetailsViewModelTests: XCTestCase {
     var fetchAnalystConsensusResult: Result<StockAnalystConsensus, Error> = .failure(MockError.notConfigured)
     var fetchBasicFinancialsResult: Result<StockBasicFinancials, Error> = .failure(MockError.notConfigured)
     var fetchAnalysisMetricsResult: Result<StockAnalysisMetrics, Error> = .failure(MockError.notConfigured)
-    var fetchFinancialStatementsResult: Result<StockFinancialStatements, Error> = .failure(MockError.notConfigured)
+    var fetchBalanceSheetStatementResult: Result<[BalanceSheetStatementResponse], Error> = .success([])
+    var fetchCashFlowStatementResult: Result<[CashFlowStatementResponse], Error> = .success([])
+    var fetchRatiosResult: Result<[RatiosResponse], Error> = .success([])
+    var fetchRatiosTTMResult: Result<[RatiosTTMResponse], Error> = .success([])
+    var fetchFinancialGrowthResult: Result<[FinancialGrowthResponse], Error> = .success([])
+    var fetchAnalystEstimatesResult: Result<[AnalystEstimatesResponse], Error> = .success([])
 
     func fetchCompanyProfile(symbol _: String) async throws -> CompanyProfileResponse {
       try fetchCompanyProfileResult.get()
@@ -208,8 +213,40 @@ final class StockDetailsViewModelTests: XCTestCase {
       try fetchAnalysisMetricsResult.get()
     }
 
-    func fetchFinancialStatements(symbol _: String) async throws -> StockFinancialStatements {
-      try fetchFinancialStatementsResult.get()
+    func fetchBalanceSheetStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [BalanceSheetStatementResponse] {
+      try fetchBalanceSheetStatementResult.get()
+    }
+
+    func fetchCashFlowStatement(symbol _: String, limit _: Int?, period _: String?) async throws -> [CashFlowStatementResponse] {
+      try fetchCashFlowStatementResult.get()
+    }
+
+    func fetchRatios(symbol _: String, limit _: Int?, period _: String?) async throws -> [RatiosResponse] {
+      try fetchRatiosResult.get()
+    }
+
+    func fetchRatiosTTM(symbol _: String) async throws -> [RatiosTTMResponse] {
+      try fetchRatiosTTMResult.get()
+    }
+
+    func fetchFinancialGrowth(symbol _: String, limit _: Int?, period _: String?) async throws -> [FinancialGrowthResponse] {
+      try fetchFinancialGrowthResult.get()
+    }
+
+    func fetchAnalystEstimates(symbol _: String, limit _: Int?, period _: String?) async throws -> [AnalystEstimatesResponse] {
+      try fetchAnalystEstimatesResult.get()
+    }
+
+    func fetchFinancialStatements(symbol: String) async throws -> StockFinancialStatements {
+      StockFinancialStatements.from(
+        symbol: symbol,
+        balanceSheets: try fetchBalanceSheetStatementResult.get(),
+        cashFlows: try fetchCashFlowStatementResult.get(),
+        ratios: try fetchRatiosResult.get(),
+        ratiosTTM: try fetchRatiosTTMResult.get(),
+        growth: try fetchFinancialGrowthResult.get(),
+        estimates: try fetchAnalystEstimatesResult.get()
+      )
     }
   }
 
@@ -290,8 +327,389 @@ final class StockDetailsViewModelTests: XCTestCase {
     )
   }
 
-  private func makeFinancialStatements(symbol: String = "AAPL") -> StockFinancialStatements {
-    StockFinancialStatements.mock(symbol: symbol)
+  private func makeBalanceSheetStatements(symbol: String = "AAPL") -> [BalanceSheetStatementResponse] {
+    [
+      BalanceSheetStatementResponse(
+        date: "2024-09-28",
+        symbol: symbol,
+        reportedCurrency: "USD",
+        cik: "0000320193",
+        filingDate: "2024-11-01",
+        acceptedDate: "2024-11-01 06:01:36",
+        fiscalYear: "2024",
+        period: "FY",
+        cashAndCashEquivalents: 29_943_000_000,
+        shortTermInvestments: nil,
+        cashAndShortTermInvestments: 52_000_000_000,
+        netReceivables: 33_410_000_000,
+        accountsReceivables: nil,
+        otherReceivables: nil,
+        inventory: 7_286_000_000,
+        prepaids: nil,
+        otherCurrentAssets: nil,
+        totalCurrentAssets: 152_987_000_000,
+        propertyPlantEquipmentNet: 45_680_000_000,
+        goodwill: nil,
+        intangibleAssets: nil,
+        goodwillAndIntangibleAssets: nil,
+        longTermInvestments: nil,
+        taxAssets: nil,
+        otherNonCurrentAssets: nil,
+        totalNonCurrentAssets: 199_876_000_000,
+        otherAssets: nil,
+        totalAssets: 352_863_000_000,
+        totalPayables: nil,
+        accountPayables: 64_115_000_000,
+        otherPayables: nil,
+        accruedExpenses: nil,
+        shortTermDebt: 12_000_000_000,
+        capitalLeaseObligationsCurrent: nil,
+        taxPayables: nil,
+        deferredRevenue: nil,
+        otherCurrentLiabilities: nil,
+        totalCurrentLiabilities: 145_308_000_000,
+        longTermDebt: 86_000_000_000,
+        deferredRevenueNonCurrent: nil,
+        deferredTaxLiabilitiesNonCurrent: nil,
+        otherNonCurrentLiabilities: nil,
+        totalNonCurrentLiabilities: 118_273_000_000,
+        otherLiabilities: nil,
+        capitalLeaseObligations: nil,
+        totalLiabilities: 263_581_000_000,
+        treasuryStock: nil,
+        preferredStock: nil,
+        commonStock: nil,
+        retainedEarnings: nil,
+        additionalPaidInCapital: nil,
+        accumulatedOtherComprehensiveIncomeLoss: nil,
+        otherTotalStockholdersEquity: nil,
+        totalStockholdersEquity: 89_282_000_000,
+        totalEquity: 89_282_000_000,
+        minorityInterest: nil,
+        totalLiabilitiesAndTotalEquity: 352_863_000_000,
+        totalInvestments: nil,
+        totalDebt: 98_000_000_000,
+        netDebt: 68_057_000_000
+      )
+    ]
+  }
+
+  private func makeCashFlowStatements(symbol: String = "AAPL") -> [CashFlowStatementResponse] {
+    [
+      CashFlowStatementResponse(
+        date: "2024-09-28",
+        symbol: symbol,
+        reportedCurrency: "USD",
+        cik: "0000320193",
+        filingDate: "2024-11-01",
+        acceptedDate: "2024-11-01 06:01:36",
+        fiscalYear: "2024",
+        period: "FY",
+        netIncome: 93_736_000_000,
+        depreciationAndAmortization: 11_445_000_000,
+        deferredIncomeTax: 0,
+        stockBasedCompensation: 11_688_000_000,
+        changeInWorkingCapital: 3_651_000_000,
+        accountsReceivables: -5_144_000_000,
+        inventory: -1_046_000_000,
+        accountsPayables: 6_020_000_000,
+        otherWorkingCapital: 3_821_000_000,
+        otherNonCashItems: -2_266_000_000,
+        netCashProvidedByOperatingActivities: 118_254_000_000,
+        investmentsInPropertyPlantAndEquipment: -9_447_000_000,
+        acquisitionsNet: 0,
+        purchasesOfInvestments: -48_656_000_000,
+        salesMaturitiesOfInvestments: 62_346_000_000,
+        otherInvestingActivities: -1_308_000_000,
+        netCashProvidedByInvestingActivities: 2_935_000_000,
+        netDebtIssuance: -5_998_000_000,
+        longTermNetDebtIssuance: -9_958_000_000,
+        shortTermNetDebtIssuance: 3_960_000_000,
+        netStockIssuance: -94_949_000_000,
+        netCommonStockIssuance: -94_949_000_000,
+        commonStockIssuance: 0,
+        commonStockRepurchased: -94_949_000_000,
+        netPreferredStockIssuance: 0,
+        netDividendsPaid: -15_234_000_000,
+        commonDividendsPaid: -15_234_000_000,
+        preferredDividendsPaid: 0,
+        otherFinancingActivities: -5_802_000_000,
+        netCashProvidedByFinancingActivities: -121_983_000_000,
+        effectOfForexChangesOnCash: 0,
+        netChangeInCash: -794_000_000,
+        cashAtEndOfPeriod: 29_943_000_000,
+        cashAtBeginningOfPeriod: 30_737_000_000,
+        operatingCashFlow: 118_254_000_000,
+        capitalExpenditure: -9_447_000_000,
+        freeCashFlow: 108_807_000_000,
+        incomeTaxesPaid: 26_102_000_000,
+        interestPaid: 0
+      )
+    ]
+  }
+
+  private func makeRatios(symbol: String = "AAPL") -> [RatiosResponse] {
+    [
+      RatiosResponse(
+        symbol: symbol,
+        date: "2024-09-28",
+        fiscalYear: "2024",
+        period: "FY",
+        reportedCurrency: "USD",
+        grossProfitMargin: 0.46,
+        ebitMargin: nil,
+        ebitdaMargin: nil,
+        operatingProfitMargin: 0.31,
+        pretaxProfitMargin: nil,
+        continuousOperationsProfitMargin: nil,
+        netProfitMargin: 0.24,
+        bottomLineProfitMargin: nil,
+        receivablesTurnover: nil,
+        payablesTurnover: nil,
+        inventoryTurnover: nil,
+        fixedAssetTurnover: nil,
+        assetTurnover: nil,
+        currentRatio: 1.1,
+        quickRatio: 0.9,
+        solvencyRatio: nil,
+        cashRatio: nil,
+        priceToEarningsRatio: 29.1,
+        priceToEarningsGrowthRatio: nil,
+        forwardPriceToEarningsGrowthRatio: nil,
+        priceToBookRatio: 42.7,
+        priceToSalesRatio: 7.6,
+        priceToFreeCashFlowRatio: nil,
+        priceToOperatingCashFlowRatio: nil,
+        debtToAssetsRatio: nil,
+        debtToEquityRatio: 1.6,
+        debtToCapitalRatio: nil,
+        longTermDebtToCapitalRatio: nil,
+        financialLeverageRatio: nil,
+        workingCapitalTurnoverRatio: nil,
+        operatingCashFlowRatio: nil,
+        operatingCashFlowSalesRatio: nil,
+        freeCashFlowOperatingCashFlowRatio: nil,
+        debtServiceCoverageRatio: nil,
+        interestCoverageRatio: nil,
+        shortTermOperatingCashFlowCoverageRatio: nil,
+        operatingCashFlowCoverageRatio: nil,
+        capitalExpenditureCoverageRatio: nil,
+        dividendPaidAndCapexCoverageRatio: nil,
+        dividendPayoutRatio: nil,
+        dividendYield: 0.0048,
+        dividendYieldPercentage: nil,
+        revenuePerShare: nil,
+        netIncomePerShare: nil,
+        interestDebtPerShare: nil,
+        cashPerShare: nil,
+        bookValuePerShare: nil,
+        tangibleBookValuePerShare: nil,
+        shareholdersEquityPerShare: nil,
+        operatingCashFlowPerShare: nil,
+        capexPerShare: nil,
+        freeCashFlowPerShare: nil,
+        netIncomePerEBT: nil,
+        ebtPerEbit: nil,
+        priceToFairValue: nil,
+        debtToMarketCap: nil,
+        effectiveTaxRate: nil,
+        enterpriseValueMultiple: nil
+      )
+    ]
+  }
+
+  private func makeRatiosTTM(symbol: String = "AAPL") -> [RatiosTTMResponse] {
+    [
+      RatiosTTMResponse(
+        symbol: symbol,
+        grossProfitMarginTTM: 0.46,
+        ebitMarginTTM: nil,
+        ebitdaMarginTTM: nil,
+        operatingProfitMarginTTM: 0.31,
+        pretaxProfitMarginTTM: nil,
+        continuousOperationsProfitMarginTTM: nil,
+        netProfitMarginTTM: 0.24,
+        bottomLineProfitMarginTTM: nil,
+        receivablesTurnoverTTM: nil,
+        payablesTurnoverTTM: nil,
+        inventoryTurnoverTTM: nil,
+        fixedAssetTurnoverTTM: nil,
+        assetTurnoverTTM: nil,
+        currentRatioTTM: 1.1,
+        quickRatioTTM: 0.9,
+        solvencyRatioTTM: nil,
+        cashRatioTTM: nil,
+        priceToEarningsRatioTTM: 28.4,
+        priceToEarningsGrowthRatioTTM: nil,
+        forwardPriceToEarningsGrowthRatioTTM: nil,
+        priceToBookRatioTTM: 41.8,
+        priceToSalesRatioTTM: 7.4,
+        priceToFreeCashFlowRatioTTM: nil,
+        priceToOperatingCashFlowRatioTTM: nil,
+        debtToAssetsRatioTTM: nil,
+        debtToEquityRatioTTM: 1.58,
+        debtToCapitalRatioTTM: nil,
+        longTermDebtToCapitalRatioTTM: nil,
+        financialLeverageRatioTTM: nil,
+        workingCapitalTurnoverRatioTTM: nil,
+        operatingCashFlowRatioTTM: nil,
+        operatingCashFlowSalesRatioTTM: nil,
+        freeCashFlowOperatingCashFlowRatioTTM: nil,
+        debtServiceCoverageRatioTTM: nil,
+        interestCoverageRatioTTM: nil,
+        shortTermOperatingCashFlowCoverageRatioTTM: nil,
+        operatingCashFlowCoverageRatioTTM: nil,
+        capitalExpenditureCoverageRatioTTM: nil,
+        dividendPaidAndCapexCoverageRatioTTM: nil,
+        dividendPayoutRatioTTM: nil,
+        dividendYieldTTM: 0.0047,
+        enterpriseValueTTM: nil,
+        revenuePerShareTTM: nil,
+        netIncomePerShareTTM: nil,
+        interestDebtPerShareTTM: nil,
+        cashPerShareTTM: nil,
+        bookValuePerShareTTM: nil,
+        tangibleBookValuePerShareTTM: nil,
+        shareholdersEquityPerShareTTM: nil,
+        operatingCashFlowPerShareTTM: nil,
+        capexPerShareTTM: nil,
+        freeCashFlowPerShareTTM: nil,
+        netIncomePerEBTTTM: nil,
+        ebtPerEbitTTM: nil,
+        priceToFairValueTTM: nil,
+        debtToMarketCapTTM: nil,
+        effectiveTaxRateTTM: nil,
+        enterpriseValueMultipleTTM: nil
+      )
+    ]
+  }
+
+  private func makeFinancialGrowth(symbol: String = "AAPL") -> [FinancialGrowthResponse] {
+    [
+      FinancialGrowthResponse(
+        symbol: symbol,
+        date: "2024-09-28",
+        fiscalYear: "2024",
+        period: "FY",
+        reportedCurrency: "USD",
+        revenueGrowth: 0.06,
+        grossProfitGrowth: nil,
+        ebitgrowth: nil,
+        operatingIncomeGrowth: nil,
+        netIncomeGrowth: 0.08,
+        epsgrowth: 0.1,
+        epsdilutedGrowth: nil,
+        weightedAverageSharesGrowth: nil,
+        weightedAverageSharesDilutedGrowth: nil,
+        dividendsPerShareGrowth: nil,
+        operatingCashFlowGrowth: 0.05,
+        receivablesGrowth: nil,
+        inventoryGrowth: nil,
+        assetGrowth: nil,
+        bookValueperShareGrowth: nil,
+        debtGrowth: nil,
+        rdexpenseGrowth: nil,
+        sgaexpensesGrowth: nil,
+        freeCashFlowGrowth: 0.07,
+        tenYRevenueGrowthPerShare: nil,
+        fiveYRevenueGrowthPerShare: 0.11,
+        threeYRevenueGrowthPerShare: nil,
+        tenYOperatingCFGrowthPerShare: nil,
+        fiveYOperatingCFGrowthPerShare: nil,
+        threeYOperatingCFGrowthPerShare: nil,
+        tenYNetIncomeGrowthPerShare: nil,
+        fiveYNetIncomeGrowthPerShare: 0.12,
+        threeYNetIncomeGrowthPerShare: nil,
+        tenYShareholdersEquityGrowthPerShare: nil,
+        fiveYShareholdersEquityGrowthPerShare: nil,
+        threeYShareholdersEquityGrowthPerShare: nil,
+        tenYDividendperShareGrowthPerShare: nil,
+        fiveYDividendperShareGrowthPerShare: nil,
+        threeYDividendperShareGrowthPerShare: nil,
+        ebitdaGrowth: nil,
+        growthCapitalExpenditure: nil,
+        tenYBottomLineNetIncomeGrowthPerShare: nil,
+        fiveYBottomLineNetIncomeGrowthPerShare: nil,
+        threeYBottomLineNetIncomeGrowthPerShare: nil
+      )
+    ]
+  }
+
+  private func makeAnalystEstimates(symbol: String = "AAPL") -> [AnalystEstimatesResponse] {
+    [
+      AnalystEstimatesResponse(
+        symbol: symbol,
+        date: "2025-09-27",
+        revenueLow: nil,
+        revenueHigh: nil,
+        revenueAvg: 420_000_000_000,
+        ebitdaLow: nil,
+        ebitdaHigh: nil,
+        ebitdaAvg: 145_000_000_000,
+        ebitLow: nil,
+        ebitHigh: nil,
+        ebitAvg: 132_000_000_000,
+        netIncomeLow: nil,
+        netIncomeHigh: nil,
+        netIncomeAvg: 101_000_000_000,
+        sgaExpenseLow: nil,
+        sgaExpenseHigh: nil,
+        sgaExpenseAvg: 27_000_000_000,
+        epsAvg: 7.85,
+        epsHigh: nil,
+        epsLow: nil,
+        numAnalystsRevenue: 24,
+        numAnalystsEps: 26
+      ),
+      AnalystEstimatesResponse(
+        symbol: symbol,
+        date: "2026-09-26",
+        revenueLow: nil,
+        revenueHigh: nil,
+        revenueAvg: 441_000_000_000,
+        ebitdaLow: nil,
+        ebitdaHigh: nil,
+        ebitdaAvg: 154_000_000_000,
+        ebitLow: nil,
+        ebitHigh: nil,
+        ebitAvg: 141_000_000_000,
+        netIncomeLow: nil,
+        netIncomeHigh: nil,
+        netIncomeAvg: 108_000_000_000,
+        sgaExpenseLow: nil,
+        sgaExpenseHigh: nil,
+        sgaExpenseAvg: 28_000_000_000,
+        epsAvg: 8.32,
+        epsHigh: nil,
+        epsLow: nil,
+        numAnalystsRevenue: 23,
+        numAnalystsEps: 25
+      ),
+      AnalystEstimatesResponse(
+        symbol: symbol,
+        date: "2027-09-25",
+        revenueLow: nil,
+        revenueHigh: nil,
+        revenueAvg: 463_000_000_000,
+        ebitdaLow: nil,
+        ebitdaHigh: nil,
+        ebitdaAvg: 163_000_000_000,
+        ebitLow: nil,
+        ebitHigh: nil,
+        ebitAvg: 149_000_000_000,
+        netIncomeLow: nil,
+        netIncomeHigh: nil,
+        netIncomeAvg: 115_000_000_000,
+        sgaExpenseLow: nil,
+        sgaExpenseHigh: nil,
+        sgaExpenseAvg: 29_000_000_000,
+        epsAvg: 8.84,
+        epsHigh: nil,
+        epsLow: nil,
+        numAnalystsRevenue: 21,
+        numAnalystsEps: 24
+      ),
+    ]
   }
 
   private func makeAnalysisMetrics(symbol: String = "AAPL") -> StockAnalysisMetrics {
@@ -316,7 +734,21 @@ final class StockDetailsViewModelTests: XCTestCase {
       lastYearRevenueGrowth: 0.06,
       ttmVsNTMRevenueGrowth: 0.01,
       currentQuarterRevenueGrowthVsPreviousYear: 0.05,
-      twoYearStackExpectedRevenueGrowth: 0.221
+      twoYearStackExpectedRevenueGrowth: 0.221,
+      currentPrice: nil,
+      marketCap: nil,
+      sharesOutstanding: nil,
+      baseYear: nil,
+      yearlyProjections: nil,
+      wacc: nil,
+      terminalGrowthRate: nil,
+      terminalMargin: nil,
+      exitPELow: nil,
+      exitPEHigh: nil,
+      dcfBasePrice: nil,
+      dcfBearPrice: nil,
+      dcfBullPrice: nil,
+      netDebt: nil
     )
   }
 
@@ -464,7 +896,12 @@ final class StockDetailsViewModelTests: XCTestCase {
     marketDataService.fetchAnalystConsensusResult = .success(makeAnalystConsensus(symbol: "META"))
     marketDataService.fetchBasicFinancialsResult = .success(makeBasicFinancials(symbol: "META"))
     marketDataService.fetchAnalysisMetricsResult = .success(makeAnalysisMetrics(symbol: "META"))
-    marketDataService.fetchFinancialStatementsResult = .success(makeFinancialStatements(symbol: "META"))
+    marketDataService.fetchBalanceSheetStatementResult = .success(makeBalanceSheetStatements(symbol: "META"))
+    marketDataService.fetchCashFlowStatementResult = .success(makeCashFlowStatements(symbol: "META"))
+    marketDataService.fetchRatiosResult = .success(makeRatios(symbol: "META"))
+    marketDataService.fetchRatiosTTMResult = .success(makeRatiosTTM(symbol: "META"))
+    marketDataService.fetchFinancialGrowthResult = .success(makeFinancialGrowth(symbol: "META"))
+    marketDataService.fetchAnalystEstimatesResult = .success(makeAnalystEstimates(symbol: "META"))
 
     await viewModel.load(stockId: "stock-1")
 
@@ -490,6 +927,27 @@ final class StockDetailsViewModelTests: XCTestCase {
     XCTAssertNotNil(viewModel.marketSnapshot)
     let currentPrice = try XCTUnwrap(viewModel.marketSnapshot?.currentPrice)
     XCTAssertEqual(currentPrice, 612.42, accuracy: 0.001)
+  }
+
+  func testLoad_WhenOneStatementsEndpointReturnsNotFound_PreservesOtherStatementData() async {
+    let service = StockServiceMock()
+    let marketDataService = MarketDataServiceMock()
+    let viewModel = StockDetailsViewModel(service: service, marketDataService: marketDataService)
+
+    service.fetchStockDetailsResult = .success(makeDetails(symbol: "UBER"))
+    marketDataService.fetchBalanceSheetStatementResult = .success(makeBalanceSheetStatements(symbol: "UBER"))
+    marketDataService.fetchCashFlowStatementResult = .success(makeCashFlowStatements(symbol: "UBER"))
+    marketDataService.fetchRatiosResult = .success(makeRatios(symbol: "UBER"))
+    marketDataService.fetchRatiosTTMResult = .success(makeRatiosTTM(symbol: "UBER"))
+    marketDataService.fetchFinancialGrowthResult = .success(makeFinancialGrowth(symbol: "UBER"))
+    marketDataService.fetchAnalystEstimatesResult = .failure(MarketDataHTTPClient.Error.api("Not found"))
+
+    await viewModel.load(stockId: "stock-1")
+
+    XCTAssertEqual(viewModel.financialStatements?.symbol, "UBER")
+    XCTAssertEqual(viewModel.financialStatements?.balanceSheets(for: .fy).first?.symbol, "UBER")
+    XCTAssertTrue(viewModel.financialStatements?.estimates.isEmpty == true)
+    XCTAssertNil(viewModel.financialStatementsMessage)
   }
 
   func testLoad_WhenConsensusTickerIsUnsupported_SetsWarningWithoutFetchingConsensus() async {

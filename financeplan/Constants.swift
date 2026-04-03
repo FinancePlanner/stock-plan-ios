@@ -4,12 +4,12 @@ import SwiftUI
 
 // swiftlint:disable force_unwrapping
 enum Constants {
-  enum FinPlanner {
-    static let filesBaseUrl = URL(string: "https://files.finplanner.io")!
+  enum Norviqa {
+    static let filesBaseUrl = URL(string: "https://files.norviqa.io")!
 
-    static let appStoreUrl = URL(string: "https://apps.apple.com/us/app/finplanner/id6745227236")!
+    static let appStoreUrl = URL(string: "https://apps.apple.com/us/app/norviqa/id6745227236")!
 
-    static let webAppBaseUrl = URL(string: "https://www.finplannerapp.com")!
+    static let webAppBaseUrl = URL(string: "https://www.norviqaapp.com")!
 
     static let swiftyCropConfiguration = SwiftyCropConfiguration(
       maxMagnificationScale: 4.0,
@@ -37,7 +37,7 @@ final class AppEnvironmentManager {
     let resolvedEnvironment: AppEnvironment
 
     // 1. Check runtime env var (set by Xcode LaunchAction)
-    if let schemeEnvValue = ProcessInfo.processInfo.environment["FINPLANNER_ENVIRONMENT"],
+    if let schemeEnvValue = ProcessInfo.processInfo.environment["NORVIQA_ENVIRONMENT"],
        let schemeEnv = AppEnvironments.from(key: schemeEnvValue) {
       schemeEnvironment = schemeEnv
       resolvedEnvironment = schemeEnv

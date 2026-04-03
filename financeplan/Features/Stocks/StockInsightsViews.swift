@@ -208,6 +208,7 @@ struct StockOverviewTab: View {
 
 struct StockFinancialStatementsTab: View {
     let statements: StockFinancialStatements?
+    let errorMessage: String?
     @Binding var selectedPeriod: StockFinancialStatementPeriod
 
     var body: some View {
@@ -245,6 +246,11 @@ struct StockFinancialStatementsTab: View {
                     snapshots: statements.estimates,
                     emptyText: "No financial estimates are available right now."
                 )
+            } else if let errorMessage {
+                ResearchPlaceholderCard(
+                    title: "Financial statements",
+                    bodyText: errorMessage
+                )
             } else {
                 ResearchPlaceholderCard(
                     title: "Financial statements (Soon)",
@@ -263,11 +269,30 @@ struct StockAnalysisTab: View {
     let valuation: StockValuationRequest?
     let onEditAnalysis: () -> Void
 
+    private var resolvedProfile: StockComparisonProfile? {
+        if let profile {
+            return profile
+        }
+
+        guard let analysisMetrics else { return nil }
+
+        let fallbackProfile = StockInsightsMockStore.profile(for: analysisMetrics.symbol)
+        return StockComparisonProfile(
+            symbol: fallbackProfile.symbol,
+            companyName: fallbackProfile.companyName,
+            currentPrice: fallbackProfile.currentPrice,
+            marketCap: fallbackProfile.marketCap,
+            sharesOutstanding: fallbackProfile.sharesOutstanding,
+            metrics: analysisMetrics.comparisonMetrics,
+            projectionScenarios: fallbackProfile.projectionScenarios
+        )
+    }
+
     var body: some View {
         LazyVStack(spacing: 16) {
-            if let profile, analysisMetrics != nil {
-                StockCurrentMetricsCard(profile: profile)
-                StockFundamentalsCard(profile: profile)
+            if let resolvedProfile, analysisMetrics != nil {
+                StockCurrentMetricsCard(profile: resolvedProfile)
+                StockFundamentalsCard(profile: resolvedProfile)
             } else {
                 StockAnalysisPlaceholderCard(
                     message: analysisMetricsMessage,

@@ -468,7 +468,7 @@ struct LoginScreen: View {
   var legalLinks: some View {
     HStack(spacing: 16) {
       Button {
-        termsURL = URL(string: "https://www.finplannerapp.com/terms")
+        termsURL = URL(string: "https://www.norviqaapp.com/terms")
       } label: {
         Text("Terms of Service")
           .typography(.nano)
@@ -476,7 +476,7 @@ struct LoginScreen: View {
       }
 
       Button {
-        privacyURL = URL(string: "https://www.finplannerapp.com/privacy")
+        privacyURL = URL(string: "https://www.norviqaapp.com/privacy")
       } label: {
         Text("Privacy Policy")
           .typography(.nano)

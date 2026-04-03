@@ -69,7 +69,7 @@ financeplan/
 │   ├── Constants.swift
 │   ├── Container+AppFactories.swift
 │   ├── ContentView.swift
-│   ├── FinPlannerApp.swift
+│   ├── NorviqaApp.swift
 │   └── SessionManager.swift
 ├── financeplanTests/
 └── financeplanUITests/
@@ -86,11 +86,11 @@ The code is organized by responsibility:
 
 ## 3. App Startup and Root Flow
 
-The app entry point is `financeplan/FinPlannerApp.swift`.
+The app entry point is `financeplan/NorviqaApp.swift`.
 
 ### App shell
 
-`FinPlannerApp` does four important things:
+`NorviqaApp` does four important things:
 
 1. creates the shared `SessionManager` as a `@StateObject`
 2. injects the session manager into the environment
@@ -166,7 +166,7 @@ That is important for study because it shows modern Swift observation, not only 
 
 Environment resolution order is:
 
-1. runtime env var `FINPLANNER_ENVIRONMENT`
+1. runtime env var `NORVIQA_ENVIRONMENT`
 2. generated scheme value from `SchemeEnvironment`
 3. persisted user defaults selection
 4. build-based default: `dev` in debug, `production` in release
@@ -970,7 +970,7 @@ If you want the mental model in one sentence:
 
 In more concrete terms:
 
-1. `FinPlannerApp` boots the app and global preferences.
+1. `NorviqaApp` boots the app and global preferences.
 2. `ContentView` decides which major flow to show.
 3. feature roots own their view models
 4. view models call services
@@ -985,7 +985,7 @@ That is the internal spine of the whole application.
 
 If you want to learn this codebase efficiently, read in this order:
 
-1. `financeplan/FinPlannerApp.swift`
+1. `financeplan/NorviqaApp.swift`
 2. `financeplan/ContentView.swift`
 3. `financeplan/Container+AppFactories.swift`
 4. `financeplan/Constants.swift`

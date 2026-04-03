@@ -37,7 +37,7 @@ final class MarketDataHTTPClientTests: XCTestCase {
 
     session.handler = { request in
       XCTAssertEqual(request.httpMethod, "GET")
-      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/profile/ZETA")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/market/profile/ZETA")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
       XCTAssertNil(request.httpBody)
@@ -64,7 +64,7 @@ final class MarketDataHTTPClientTests: XCTestCase {
 
     session.handler = { request in
       XCTAssertEqual(request.httpMethod, "GET")
-      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/quote/ZETA")
+      XCTAssertEqual(request.url?.absoluteString, "https://api.example.com/v1/market/quote/ZETA")
       XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
       XCTAssertNil(request.httpBody)
 
@@ -139,7 +139,21 @@ final class MarketDataHTTPClientTests: XCTestCase {
         "lastYearRevenueGrowth": 0.07,
         "ttmVsNTMRevenueGrowth": 0.01,
         "currentQuarterRevenueGrowthVsPreviousYear": 0.06,
-        "twoYearStackExpectedRevenueGrowth": 0.24
+        "twoYearStackExpectedRevenueGrowth": 0.24,
+        "currentPrice": null,
+        "marketCap": null,
+        "sharesOutstanding": null,
+        "baseYear": null,
+        "yearlyProjections": null,
+        "wacc": null,
+        "terminalGrowthRate": null,
+        "terminalMargin": null,
+        "exitPELow": null,
+        "exitPEHigh": null,
+        "dcfBasePrice": null,
+        "dcfBearPrice": null,
+        "dcfBullPrice": null,
+        "netDebt": null
       }
       """.data(using: .utf8) ?? Data()
       let response = try XCTUnwrap(
@@ -159,5 +173,40 @@ final class MarketDataHTTPClientTests: XCTestCase {
     XCTAssertEqual(try XCTUnwrap(response.ttmPE), 21.4, accuracy: 0.0001)
     XCTAssertEqual(try XCTUnwrap(response.netMargin), 0.2, accuracy: 0.0001)
     XCTAssertEqual(try XCTUnwrap(response.comparisonMetrics[.grossMargin]), 0.61, accuracy: 0.0001)
+  }
+
+  func testFetchBalanceSheetStatement_AppendsGETQueryParameters() async throws {
+    let session = SessionMock()
+    let baseURL = try XCTUnwrap(URL(string: "https://api.example.com"))
+
+    session.handler = { request in
+      XCTAssertEqual(request.httpMethod, "GET")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer token-123")
+      XCTAssertNil(request.httpBody)
+
+      let url = try XCTUnwrap(request.url)
+      XCTAssertEqual(url.scheme, "https")
+      XCTAssertEqual(url.host, "api.example.com")
+      XCTAssertEqual(url.path, "/v1/market/balance-sheet-statement/UBER")
+
+      let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+      let queryItems = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value) })
+      XCTAssertEqual(queryItems["limit"], "10")
+      XCTAssertEqual(queryItems["period"], "quarter")
+
+      let response = try XCTUnwrap(
+        HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)
+      )
+      return (Data("[]".utf8), response)
+    }
+
+    let client = MarketDataHTTPClient(
+      baseURL: baseURL,
+      session: session,
+      authTokenProvider: { "token-123" }
+    )
+    let response = try await client.fetchBalanceSheetStatement(symbol: "uber", limit: 10, period: "quarter")
+
+    XCTAssertTrue(response.isEmpty)
   }
 }

@@ -21,7 +21,7 @@ SwiftUI client for portfolio planning, stock research UI, expenses/budget views,
 
 **Session:** `SessionManager` (`ObservableObject`) exposes display username app-wide. `AuthSessionManager` + `UserDefaultsAuthSessionStore` persist tokens; `NotificationCenter` notifies on invalidation.
 
-**Appearance:** `AppAppearance` (`@AppStorage`) drives `preferredColorScheme` from `FinPlannerApp`. `AppTheme` centralizes semantic colors for light/dark.
+**Appearance:** `AppAppearance` (`@AppStorage`) drives `preferredColorScheme` from `NorviqaApp`. `AppTheme` centralizes semantic colors for light/dark.
 
 ---
 
@@ -29,7 +29,7 @@ SwiftUI client for portfolio planning, stock research UI, expenses/budget views,
 
 | File | Responsibility |
 |------|----------------|
-| `FinPlannerApp.swift` | `@main` app; injects `SessionManager`, `AppEnvironment`, appearance. |
+| `NorviqaApp.swift` | `@main` app; injects `SessionManager`, `AppEnvironment`, appearance. |
 | `ContentView.swift` | Splash delay → restore session → `LoginScreen` or `HomeScreen` or `OnboardingImportFlow` (first-time stock import flag per user). |
 | `Features/Launch/SplashScreen.swift` | Launch branding / transition. |
 
@@ -174,8 +174,8 @@ The HTTP API this app calls is implemented by **StockPlanBackend**, in the same 
 | Environment | API base | WebSocket base |
 |-------------|----------|----------------|
 | **local** | `http://localhost:8080` | `ws://localhost:8080/ws` |
-| **dev** | `https://dev-api.finplanner.io` | `wss://dev-api.finplanner.io/ws` |
-| **production** | `https://api.finplanner.io` | `wss://api.finplanner.io/ws` |
+| **dev** | `https://dev-api.norviqa.io` | `wss://dev-api.norviqa.io/ws` |
+| **production** | `https://api.norviqa.io` | `wss://api.norviqa.io/ws` |
 
 Run the backend locally (see `StockPlanBackend/README.md` and `docker-compose.yml`) when using the **local** environment.
 
@@ -207,7 +207,7 @@ If packages fail to resolve:
 ```
 financeplan/
 ├── financeplan/
-│   ├── FinPlannerApp.swift
+│   ├── NorviqaApp.swift
 │   ├── ContentView.swift
 │   ├── SessionManager.swift
 │   ├── Container+AppFactories.swift

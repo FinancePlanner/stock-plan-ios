@@ -81,6 +81,30 @@ struct MarketDataHTTPClient {
     try await call(GetAnalysisMetricsEndpoint(symbol: symbol))
   }
 
+  func fetchBalanceSheetStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [BalanceSheetStatementResponse] {
+    try await call(GetBalanceSheetStatementEndpoint(symbol: symbol, limit: limit, period: period))
+  }
+
+  func fetchCashFlowStatement(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [CashFlowStatementResponse] {
+    try await call(GetCashFlowStatementEndpoint(symbol: symbol, limit: limit, period: period))
+  }
+
+  func fetchRatios(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [RatiosResponse] {
+    try await call(GetRatiosEndpoint(symbol: symbol, limit: limit, period: period))
+  }
+
+  func fetchRatiosTTM(symbol: String) async throws -> [RatiosTTMResponse] {
+    try await call(GetRatiosTTMEndpoint(symbol: symbol))
+  }
+
+  func fetchFinancialGrowth(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [FinancialGrowthResponse] {
+    try await call(GetFinancialGrowthEndpoint(symbol: symbol, limit: limit, period: period))
+  }
+
+  func fetchAnalystEstimates(symbol: String, limit: Int? = nil, period: String? = nil) async throws -> [AnalystEstimatesResponse] {
+    try await call(GetAnalystEstimatesEndpoint(symbol: symbol, limit: limit, period: period))
+  }
+
   private func call<E: Endpoint>(_ endpoint: E) async throws -> E.Response where E.Response: Codable {
     let data = try await perform(endpoint)
     do {
@@ -168,7 +192,9 @@ struct MarketDataHTTPClient {
 
   private func makeURLRequest<E: Endpoint>(for endpoint: E) throws -> URLRequest {
     let normalizedPath = endpoint.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-    let url = baseURL.appendingPathComponent(normalizedPath)
+    let base = baseURL.appendingPathComponent(normalizedPath)
+    let parameters = try endpoint.asParameters()
+    let url = try url(for: endpoint.method, baseURL: base, parameters: parameters)
 
     var request = URLRequest(url: url)
     request.httpMethod = endpoint.method.rawValue
@@ -182,7 +208,28 @@ struct MarketDataHTTPClient {
       request.setValue(header.value, forHTTPHeaderField: header.name)
     }
 
+    if endpoint.method != .get, !parameters.isEmpty {
+      request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+    }
+
     return request
+  }
+
+  private func url(for method: HTTPMethod, baseURL: URL, parameters: Parameters) throws -> URL {
+    guard method == .get, !parameters.isEmpty else {
+      return baseURL
+    }
+
+    var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
+    components?.queryItems = parameters.compactMap { key, value in
+      URLQueryItem(name: key, value: String(describing: value))
+    }
+
+    guard let url = components?.url else {
+      throw Error.invalidResponse
+    }
+
+    return url
   }
 }
 
