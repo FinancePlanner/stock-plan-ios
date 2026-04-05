@@ -1,5 +1,6 @@
 import Charts
 import SwiftUI
+import StockPlanShared
 
 private enum BudgetComparisonMode: String, CaseIterable, Identifiable {
   case monthly

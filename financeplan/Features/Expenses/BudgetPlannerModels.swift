@@ -1,64 +1,61 @@
 import SwiftUI
+import StockPlanShared
 
-enum BudgetPillar: String, CaseIterable, Identifiable, Hashable {
-  case fundamentals
-  case futureYou
-  case fun
-
-  var id: String { rawValue }
+extension BudgetPillar: Identifiable {
+  public var id: String { rawValue }
 
   var title: String {
     switch self {
     case .fundamentals:
-      "Fundamentals"
+      return "Fundamentals"
     case .futureYou:
-      "Future You"
+      return "Future You"
     case .fun:
-      "Fun"
+      return "Fun"
     }
   }
 
   var subtitle: String {
     switch self {
     case .fundamentals:
-      "Daily life and recurring essentials."
+      return "Daily life and recurring essentials."
     case .futureYou:
-      "Investments and long-term goals."
+      return "Investments and long-term goals."
     case .fun:
-      "Lifestyle, travel, and discretionary spending."
+      return "Lifestyle, travel, and discretionary spending."
     }
   }
 
   var symbol: String {
     switch self {
     case .fundamentals:
-      "house"
+      return "house"
     case .futureYou:
-      "chart.line.uptrend.xyaxis"
+      return "chart.line.uptrend.xyaxis"
     case .fun:
-      "sparkles"
+      return "sparkles"
     }
   }
 
   var defaultTargetShare: Double {
     switch self {
     case .fundamentals:
-      0.50
+      return 0.50
     case .futureYou:
-      0.20
+      return 0.20
     case .fun:
-      0.30
+      return 0.30
     }
   }
 
   func color(for scheme: ColorScheme) -> Color {
     switch self {
     case .fundamentals:
-      AppTheme.Colors.tint(for: scheme)
+      return AppTheme.Colors.tint(for: scheme)
     case .futureYou:
-      .indigo
+      return .indigo
     case .fun:
-      AppTheme.Colors.secondaryTint(for: scheme)
+      return AppTheme.Colors.secondaryTint(for: scheme)
     }
   }
 }

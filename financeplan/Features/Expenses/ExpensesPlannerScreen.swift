@@ -1,5 +1,6 @@
 import Charts
 import SwiftUI
+import StockPlanShared
 
 struct ExpensesPlannerScreen: View {
   @Binding var isSettingsPresented: Bool
@@ -96,7 +97,11 @@ struct ExpensesPlannerScreen: View {
       .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
       .navigationTitle("Expenses")
       .navigationBarTitleDisplayMode(.large)
+      .task {
+        await viewModel.load()
+      }
       .toolbarTitleMenu {
+
         Picker("Month", selection: selectedMonthBinding) {
           ForEach(viewModel.availableMonths, id: \.self) { date in
             Text(date.formatted(.dateTime.month(.wide).year())).tag(date)
@@ -141,6 +146,12 @@ struct ExpensesPlannerScreen: View {
 
               Button("Record spend", systemImage: "plus.circle") {
                 isActivitySheetPresented = true
+              }
+              
+              Divider()
+              
+              Button("Delete this month plan", systemImage: "trash", role: .destructive) {
+                viewModel.deleteCurrentSnapshot()
               }
             } label: {
               Image(systemName: "ellipsis.circle")

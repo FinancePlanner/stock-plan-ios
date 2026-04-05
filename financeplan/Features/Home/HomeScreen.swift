@@ -3,6 +3,8 @@ import Combine
 import Foundation
 import StoreKit
 import SwiftUI
+import StockPlanShared
+import Factory
 
 private enum HomeTab: Hashable {
   case dashboard
@@ -90,6 +92,9 @@ private struct DashboardRoot: View {
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var searchViewModel = AssetSearchViewModel()
   @State private var isProfilePresented = false
+  @State private var dashboardData: DashboardResponse?
+  
+  private let dashboardService: any DashboardServicing = Container.shared.dashboardService()
 
   // to fill from endpoint later
   private let trendPoints = PortfolioTrendPoint.mock
@@ -112,11 +117,24 @@ private struct DashboardRoot: View {
     NavigationStack {
       ScrollView {
         VStack(spacing: 20) {
-          DashboardHeroCard(
-            onPortfolioTap: { selectedTab = .portfolio },
-            onExpensesTap: { selectedTab = .expenses },
-            onReportsTap: { selectedTab = .reports }
-          )
+            if let dashboard = dashboardData {
+                DashboardHeroCard(
+                    totalValue: dashboard.totalValue,
+                    onPortfolioTap: { selectedTab = .portfolio },
+                    onExpensesTap: { selectedTab = .expenses },
+                    onReportsTap: { selectedTab = .reports }
+                )
+            } else {
+                // Loading / Error UI
+                DashboardHeroCard(
+                    totalValue: 0,
+                    onPortfolioTap: { selectedTab = .portfolio },
+                    onExpensesTap: { selectedTab = .expenses },
+                    onReportsTap: { selectedTab = .reports }
+                )
+                .redacted(reason: .placeholder)
+            }
+          // ... rest of view
 
           if !searchViewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             AssetSearchCard(viewModel: searchViewModel)
@@ -142,6 +160,13 @@ private struct DashboardRoot: View {
       .background(MeshGradientBackground())
       .navigationTitle(greetingText)
       .navigationBarTitleDisplayMode(.large)
+      .task {
+          do {
+              self.dashboardData = try await dashboardService.getDashboard()
+          } catch {
+              // Handle error
+          }
+      }
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
           Button {
@@ -421,6 +446,7 @@ private struct SettingsDetailView: View {
 // MARK: - Dashboard cards
 
 private struct DashboardHeroCard: View {
+  let totalValue: Double
   let onPortfolioTap: () -> Void
   let onExpensesTap: () -> Void
   let onReportsTap: () -> Void
