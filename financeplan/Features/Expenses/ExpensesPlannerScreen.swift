@@ -40,7 +40,7 @@ struct ExpensesPlannerScreen: View {
 
           PlannerSalaryCard(
             monthTitle: viewModel.selectedMonthDisplayTitle,
-            netSalary: viewModel.selectedMonthSnapshot.netSalary,
+            netSalary: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
             allocated: viewModel.selectedMonthPlannedTotal,
             spent: viewModel.selectedMonthActualTotal,
             leftToAllocate: viewModel.selectedMonthAvailableAfterPillarPlan,
@@ -186,7 +186,7 @@ struct ExpensesPlannerScreen: View {
       }
       .sheet(isPresented: $isSalaryEditorPresented) {
         NetSalaryEditorSheet(
-          currentValue: viewModel.selectedMonthSnapshot.netSalary,
+          currentValue: viewModel.selectedMonthSnapshot?.netSalary ?? 0,
           monthTitle: viewModel.selectedMonthDisplayTitle,
           onSave: viewModel.updateNetSalary
         )
@@ -194,7 +194,7 @@ struct ExpensesPlannerScreen: View {
       .sheet(isPresented: $isTargetEditorPresented) {
         PillarTargetsEditorSheet(
           monthTitle: viewModel.selectedMonthDisplayTitle,
-          currentShares: viewModel.selectedMonthSnapshot.targetShares,
+          currentShares: viewModel.selectedMonthSnapshot?.targetShares ?? [:],
           onSave: viewModel.updateTargetShares
         )
       }
@@ -206,7 +206,7 @@ struct ExpensesPlannerScreen: View {
       .sheet(isPresented: $isActivitySheetPresented) {
         RecordSpendSheet(
           monthTitle: viewModel.selectedMonthDisplayTitle,
-          availableItems: viewModel.selectedMonthSnapshot.items
+          availableItems: viewModel.selectedMonthSnapshot?.items ?? []
         ) { draft in
           viewModel.recordExpense(draft)
         }

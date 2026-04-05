@@ -147,8 +147,9 @@ final class BudgetPlannerViewModel: ObservableObject {
     calendar.component(.year, from: selectedMonthStart)
   }
 
-  var selectedMonthSnapshot: MonthlyBudgetSnapshot {
-    monthlySnapshots[selectedMonthIndex]
+  var selectedMonthSnapshot: MonthlyBudgetSnapshot? {
+    guard monthlySnapshots.indices.contains(selectedMonthIndex) else { return nil }
+    return monthlySnapshots[selectedMonthIndex]
   }
 
   var selectedYearSummaries: [BudgetMonthSummary] {
@@ -207,7 +208,7 @@ final class BudgetPlannerViewModel: ObservableObject {
   }
 
   var selectedMonthPlannedTotal: Double {
-    selectedMonthSnapshot.items.reduce(0) { $0 + $1.plannedAmount }
+    selectedMonthSnapshot?.items.reduce(0) { $0 + $1.plannedAmount } ?? 0
   }
 
   var selectedMonthActualTotal: Double {
@@ -215,7 +216,7 @@ final class BudgetPlannerViewModel: ObservableObject {
   }
 
   var selectedMonthRemainingToAllocate: Double {
-    selectedMonthSnapshot.netSalary - selectedMonthPlannedTotal
+    (selectedMonthSnapshot?.netSalary ?? 0) - selectedMonthPlannedTotal
   }
 
   var selectedMonthAvailableAfterPillarPlan: Double {
@@ -223,7 +224,7 @@ final class BudgetPlannerViewModel: ObservableObject {
   }
 
   var selectedMonthLeftAfterSpending: Double {
-    selectedMonthSnapshot.netSalary - selectedMonthActualTotal
+    (selectedMonthSnapshot?.netSalary ?? 0) - selectedMonthActualTotal
   }
 
   var selectedMonthDisplayTitle: String {
@@ -240,15 +241,16 @@ final class BudgetPlannerViewModel: ObservableObject {
   }
 
   func createNextMonthPlan() {
-    let nextMonth = calendar.date(byAdding: .month, value: 1, to: selectedMonthSnapshot.monthStart) ?? .now
+    let nextMonth = calendar.date(byAdding: .month, value: 1, to: selectedMonthSnapshot?.monthStart ?? .now) ?? .now
     let nextMonthStart = calendar.startOfMonth(for: nextMonth)
+
 
     guard !monthlySnapshots.contains(where: { calendar.isDate($0.monthStart, equalTo: nextMonthStart, toGranularity: .month) }) else {
       selectedMonthStart = nextMonthStart
       return
     }
 
-    let template = selectedMonthSnapshot
+    let template = selectedMonthSnapshot!
     let newSnapshot = MonthlyBudgetSnapshot(
       id: UUID(),
       monthStart: nextMonthStart,
@@ -306,10 +308,10 @@ final class BudgetPlannerViewModel: ObservableObject {
   }
 
   func updateNetSalary(_ amount: Double) {
+    guard let snapshot = selectedMonthSnapshot else { return }
     let newAmount = max(amount, 0)
     monthlySnapshots[selectedMonthIndex].netSalary = newAmount
     
-    let snapshot = monthlySnapshots[selectedMonthIndex]
     Task {
         do {
             var stringShares: [String: Double] = [:]
@@ -324,10 +326,10 @@ final class BudgetPlannerViewModel: ObservableObject {
   }
 
   func updateTargetShares(_ shares: [BudgetPillar: Double]) {
+    guard let snapshot = selectedMonthSnapshot else { return }
     let normalized = normalizeShares(shares)
     monthlySnapshots[selectedMonthIndex].targetShares = normalized
     
-    let snapshot = monthlySnapshots[selectedMonthIndex]
     Task {
         do {
             var stringShares: [String: Double] = [:]
@@ -342,9 +344,10 @@ final class BudgetPlannerViewModel: ObservableObject {
   }
 
   func addOrUpdatePlanItem(_ draft: BudgetPlanItemDraft) {
+    guard let snapshot = selectedMonthSnapshot else { return }
     let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !title.isEmpty else { return }
-    let snapshotId = monthlySnapshots[selectedMonthIndex].id
+    let snapshotId = snapshot.id
 
     if let itemID = draft.itemID,
       let existingIndex = monthlySnapshots[selectedMonthIndex].items.firstIndex(where: { $0.id == itemID })
