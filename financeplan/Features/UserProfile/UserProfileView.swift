@@ -295,7 +295,7 @@ public struct ProfileDetailView: View {
             .listRowBackground(AppTheme.Colors.elevatedCardBackground(for: scheme))
             
             // Privacy & Protection
-            Section("PRIVACY & PROTECTION") {
+            Section {
                 Toggle(isOn: $biometricUnlock) {
                     HStack(spacing: 12) {
                         iconView("faceid", backgroundColor: Color(red: 0.15, green: 0.25, blue: 0.35), foregroundColor: .blue)
@@ -331,6 +331,8 @@ public struct ProfileDetailView: View {
                         }
                     }
                 }
+            } header: {
+                Text("PRIVACY & PROTECTION")
             } footer: {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "checkmark.shield.fill")
