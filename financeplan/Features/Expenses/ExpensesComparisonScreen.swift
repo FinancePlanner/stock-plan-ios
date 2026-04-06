@@ -35,12 +35,6 @@ struct ExpensesComparisonScreen: View {
               .appGlassEffect(.capsule)
           }
           .accessibilityLabel("Open settings")
-
-          AppTopBarProfileButton(
-            isUserMenuPresented: isProfilePresented,
-            onTap: { isProfilePresented = true }
-          )
-          .accessibilityLabel("Open profile")
         }
       }
       .sheet(isPresented: $isProfilePresented) {

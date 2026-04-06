@@ -61,7 +61,7 @@ public struct UserProfileView: View {
                         avatarView(profile)
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(fullName(for: profile) ?? "User")
+                            Text(profile?.username ?? "Unknown User")
                                 .font(.title3.bold())
                                 .foregroundStyle(.primary)
                             Text("View and edit your account")
@@ -237,19 +237,10 @@ public struct UserProfileView: View {
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    private func fullName(for profile: UserProfile?) -> String? {
-        guard let profile else { return nil }
-        let parts = [normalized(profile.firstName), normalized(profile.lastName)].compactMap { $0 }
-        guard !parts.isEmpty else { return nil }
-        return parts.joined(separator: " ")
-    }
-
     private func placeholderInitial(for profile: UserProfile?) -> String {
         guard let profile else { return "?" }
         let seed =
             normalized(profile.username)
-            ?? normalized(profile.firstName)
-            ?? normalized(profile.lastName)
             ?? normalized(profile.email)
             ?? "?"
         return String(seed.prefix(1)).uppercased()
@@ -285,8 +276,6 @@ public struct ProfileDetailView: View {
             
             // Profile Info Section
             Section {
-                infoRow(title: "First Name", value: normalized(profile?.firstName) ?? "")
-                infoRow(title: "Last Name", value: normalized(profile?.lastName) ?? "")
                 infoRow(title: "Username", value: formattedUsername(for: profile) ?? "")
                 infoRow(title: "Email", value: profile?.email ?? "")
             } footer: {
@@ -301,7 +290,7 @@ public struct ProfileDetailView: View {
                         iconView("faceid", backgroundColor: Color(red: 0.15, green: 0.25, blue: 0.35), foregroundColor: .blue)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Biometric Unlock")
-                            Text("FaceID active for all vault access")
+                            Text("FaceID active for all Norviqa access")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -337,7 +326,7 @@ public struct ProfileDetailView: View {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "checkmark.shield.fill")
                         .foregroundStyle(.blue)
-                    Text("Your personal information is encrypted and stored in a decentralized hardware enclave. No one at the Vault can access your private identifiers or transaction history.")
+                    Text("Your personal information is encrypted and stored in a decentralized hardware enclave. No one at Norviqa can access your private identifiers or transaction history.")
                 }
                 .padding(.top, 8)
             }
@@ -441,8 +430,6 @@ public struct ProfileDetailView: View {
         guard let profile else { return "?" }
         let seed =
             normalized(profile.username)
-            ?? normalized(profile.firstName)
-            ?? normalized(profile.lastName)
             ?? normalized(profile.email)
             ?? "?"
         return String(seed.prefix(1)).uppercased()

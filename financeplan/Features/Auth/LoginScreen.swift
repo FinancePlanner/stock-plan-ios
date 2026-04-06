@@ -19,20 +19,15 @@ private struct VaultColors {
 }
 
 // MARK: - Logo Component
-private struct VaultLogo: View {
-    var isSignUp: Bool
+private struct NorviqaLogo: View {
+    var size: CGFloat = 64
     
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(VaultColors.primaryBlue)
-                .frame(width: 56, height: 56)
-            
-            Image(systemName: isSignUp ? "shield.fill" : "wallet.bifold.fill")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(Color(white: 0.1))
-        }
-        .shadow(color: VaultColors.primaryBlue.opacity(0.2), radius: 15, x: 0, y: 8)
+        Image("NorviqaLogoLight")
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .shadow(color: VaultColors.primaryBlue.opacity(0.3), radius: 15, x: 0, y: 8)
     }
 }
 
@@ -197,13 +192,8 @@ private struct SignInView: View {
                 
                 // Header
                 VStack(spacing: 16) {
-                    VaultLogo(isSignUp: false)
+                    NorviqaLogo(size: 78)
                         .padding(.top, 60)
-                    
-                    Text("Vault")
-                        .font(.system(size: 20, weight: .bold, design: .default))
-                        .foregroundColor(.white)
-                        .tracking(0.5)
                     
                     VStack(spacing: 8) {
                         Text("Welcome back")
@@ -342,7 +332,7 @@ private struct SignUpView: View {
                 
                 // Header (Top Bar)
                 HStack {
-                    Text("Vault")
+                    Text("Norviqa")
                         .font(.system(size: 20, weight: .bold, design: .default))
                         .foregroundColor(.white)
                     Spacer()
@@ -357,8 +347,8 @@ private struct SignUpView: View {
                 
                 // Hero
                 VStack(alignment: .center, spacing: 16) {
-                    VaultLogo(isSignUp: true)
-                        .padding(.top, 32)
+                    NorviqaLogo(size: 78)
+                        .padding(.top, 60)
                     
                     Text("Create your\naccount")
                         .font(.system(size: 34, weight: .bold, design: .default))
@@ -377,22 +367,6 @@ private struct SignUpView: View {
                 
                 // Form Fields
                 VStack(spacing: 20) {
-                    VaultTextField(
-                        label: "First Name",
-                        placeholder: "John",
-                        text: $viewModel.firstName,
-                        isLight: true,
-                        textContentType: .givenName
-                    )
-                    
-                    VaultTextField(
-                        label: "Last Name",
-                        placeholder: "Doe",
-                        text: $viewModel.lastName,
-                        isLight: true,
-                        textContentType: .familyName
-                    )
-                    
                     VaultTextField(
                         label: "Username",
                         placeholder: "johndoe",
@@ -550,17 +524,17 @@ private struct VaultPlatinumCard: View {
                 )
             
             VStack(alignment: .leading, spacing: 8) {
-                Text("MEMBER BENEFIT")
+                Text("NORDIQ")
                     .font(.system(size: 10, weight: .bold, design: .default))
                     .tracking(1.5)
                     .foregroundColor(VaultColors.primaryBlue)
                 
-                Text("Vault Platinum\nConcierge")
+                Text("Your data forever yours only")
                     .font(.system(size: 22, weight: .bold, design: .serif))
                     .foregroundColor(.white)
                     .padding(.top, 4)
                 
-                Text("Access 24/7 dedicated financial advisors\nafter verification.")
+                Text("EDIT THIS MUCH LATER")
                     .font(.system(size: 13))
                     .foregroundColor(Color(white: 0.7))
                     .lineSpacing(4)
@@ -595,7 +569,7 @@ private struct VaultForgotPasswordView: View {
                             .foregroundColor(VaultColors.primaryBlue)
                     }
                     Spacer()
-                    Text("Vault")
+                    Text("Norviqa")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.white)
                     Spacer()
@@ -611,17 +585,9 @@ private struct VaultForgotPasswordView: View {
                 ScrollView {
                     VStack(spacing: 32) {
                         
-                        // Lock Icon
-                        ZStack {
-                            Circle()
-                                .fill(VaultColors.cardBackground)
-                                .frame(width: 80, height: 80)
-                            
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundColor(VaultColors.primaryBlue)
-                        }
-                        .padding(.top, 40)
+                        // Norviqa Logo
+                        NorviqaLogo(size: 80)
+                            .padding(.top, 40)
                         
                         // Titles
                         VStack(spacing: 12) {
@@ -704,7 +670,7 @@ private struct VaultForgotPasswordView: View {
                         // Secure Vault Protection Badge
                         HStack(spacing: 8) {
                             Image(systemName: "shield.fill")
-                            Text("SECURE VAULT PROTECTION")
+                            Text("SECURE NORVIQA PROTECTION")
                         }
                         .font(.system(size: 11, weight: .semibold))
                         .tracking(1.0)

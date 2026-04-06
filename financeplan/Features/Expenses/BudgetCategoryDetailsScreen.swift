@@ -49,14 +49,6 @@ struct BudgetCategoryDetailsScreen: View {
     .background(AppTheme.Colors.pageBackground(for: colorScheme).ignoresSafeArea())
     .navigationTitle("Budget Category Details")
     .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      ToolbarItem(placement: .topBarTrailing) {
-        AppTopBarProfileButton(
-          isUserMenuPresented: isProfilePresented,
-          onTap: { isProfilePresented = true }
-        )
-      }
-    }
   }
 }
 

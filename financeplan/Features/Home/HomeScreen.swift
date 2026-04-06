@@ -194,12 +194,6 @@ private struct DashboardRoot: View {
               .appGlassEffect(.capsule)
           }
           .accessibilityLabel("Open settings")
-
-          AppTopBarProfileButton(
-            isUserMenuPresented: isProfilePresented,
-            onTap: { isProfilePresented = true }
-          )
-          .accessibilityLabel("Open profile")
         }
       }
       .searchable(
@@ -275,11 +269,6 @@ private struct PortfolioRoot: View {
               .appGlassEffect(.capsule)
           }
           .accessibilityLabel("Open settings")
-
-          AppTopBarProfileButton(
-            isUserMenuPresented: isProfilePresented,
-            onTap: { isProfilePresented = true }
-          )
         }
       }
       .sheet(isPresented: $isProfilePresented) {
