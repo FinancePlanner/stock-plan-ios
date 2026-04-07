@@ -120,6 +120,33 @@ private struct DashboardRoot: View {
 
   // to fill from endpoint later
   private let trendPoints = PortfolioTrendPoint.mock
+  
+  private var portfolioPoints: [ChartDataPoint] {
+      let calendar = Calendar.current
+      let today = Date()
+      let baseValue = (dashboardData?.totalValue ?? 0) == 0 ? 100000.0 : (dashboardData?.totalValue ?? 0)
+      
+      return (0..<30).map { i in
+          let date = calendar.date(byAdding: .day, value: -(29 - i), to: today)!
+          let noise = sin(Double(i) * 0.5) * 5000.0 + Double.random(in: -1000...1000)
+          let trend = Double(i) * 300.0
+          return ChartDataPoint(date: date, value: max(0, baseValue * 0.8 + noise + trend))
+      }
+  }
+  
+  private var spendingPointsData: [ChartDataPoint] {
+      let calendar = Calendar.current
+      let today = Date()
+      let baseValue = 3500.0
+      
+      return (0..<30).map { i in
+          let date = calendar.date(byAdding: .day, value: -(29 - i), to: today)!
+          let noise = sin(Double(i) * 0.8) * 500.0 + Double.random(in: -200...200)
+          let trend = Double(i) * 15.0
+          return ChartDataPoint(date: date, value: max(0, baseValue * 0.5 + noise + trend))
+      }
+  }
+
   // to fill from endpoint later
   private let spendingPoints = SpendingPoint.mock
   // to fill from endpoint later
@@ -142,6 +169,9 @@ private struct DashboardRoot: View {
             if let dashboard = dashboardData {
                 DashboardHeroCard(
                     totalValue: dashboard.totalValue,
+                    totalSpending: 3250.45,
+                    portfolioPoints: portfolioPoints,
+                    spendingPoints: spendingPointsData,
                     onPortfolioTap: { selectedTab = .portfolio },
                     onExpensesTap: { selectedTab = .expenses },
                     onReportsTap: { selectedTab = .reports }
@@ -150,6 +180,9 @@ private struct DashboardRoot: View {
                 // Loading / Error UI
                 DashboardHeroCard(
                     totalValue: 0,
+                    totalSpending: 0,
+                    portfolioPoints: [],
+                    spendingPoints: [],
                     onPortfolioTap: { selectedTab = .portfolio },
                     onExpensesTap: { selectedTab = .expenses },
                     onReportsTap: { selectedTab = .reports }
@@ -476,6 +509,9 @@ private struct SettingsDetailView: View {
 
 private struct DashboardHeroCard: View {
   let totalValue: Double
+  let totalSpending: Double
+  let portfolioPoints: [ChartDataPoint]
+  let spendingPoints: [ChartDataPoint]
   let onPortfolioTap: () -> Void
   let onExpensesTap: () -> Void
   let onReportsTap: () -> Void
@@ -483,42 +519,45 @@ private struct DashboardHeroCard: View {
   @Environment(\.colorScheme) private var colorScheme
   @State private var showingPortfolio = true
   
-  private var mockChartData: [ChartDataPoint] {
-      let calendar = Calendar.current
-      let today = Date()
-      let baseValue = totalValue == 0 ? 100000.0 : totalValue
-      
-      return (0..<30).map { i in
-          let date = calendar.date(byAdding: .day, value: -(29 - i), to: today)!
-          let noise = sin(Double(i) * 0.5) * 5000.0 + Double.random(in: -1000...1000)
-          let trend = Double(i) * 300.0
-          return ChartDataPoint(date: date, value: max(0, baseValue * 0.8 + noise + trend))
-      }
+  private var currentTitle: String {
+    showingPortfolio ? "Total Wealth" : "Monthly Spending"
+  }
+  
+  private var currentValue: Double {
+    showingPortfolio ? totalValue : totalSpending
+  }
+  
+  private var currentPoints: [ChartDataPoint] {
+    showingPortfolio ? portfolioPoints : spendingPoints
+  }
+  
+  private var currentColor: Color {
+    showingPortfolio ? .green : .purple
   }
 
   var body: some View {
     GlassCard(cornerRadius: 28) {
       VStack(alignment: .leading, spacing: 18) {
-        Text("Total Wealth")
+        Text(currentTitle)
           .typography(.small, weight: .semibold)
           .foregroundStyle(.secondary)
 
         VStack(alignment: .leading, spacing: 8) {
-          Text(totalValue.currency)
+          Text(currentValue.currency)
             .typography(.display, weight: .bold)
             .minimumScaleFactor(0.7)
             .lineLimit(1)
             .contentTransition(.numericText())
 
           HStack(spacing: 4) {
-            Image(systemName: "arrow.up.right")
-            Text("+2.31% ($2,816.32)")
+            Image(systemName: showingPortfolio ? "arrow.up.right" : "arrow.down.right")
+            Text(showingPortfolio ? "+2.31% ($2,816.32)" : "-12.4% vs last month")
           }
           .font(.subheadline.weight(.semibold))
-          .foregroundStyle(.green)
+          .foregroundStyle(showingPortfolio ? .green : .green) // Green even for spending if it's down
         }
         
-        InteractiveLineChart(data: mockChartData, color: .green)
+        InteractiveLineChart(data: currentPoints, color: currentColor)
           .frame(height: 140)
           .padding(.horizontal, -12)
           

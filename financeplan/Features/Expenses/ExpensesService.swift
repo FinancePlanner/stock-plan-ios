@@ -5,7 +5,7 @@ import Factory
 protocol ExpensesServicing {
     // Snapshots
     func getSnapshots(year: Int?, month: Int?) async throws -> [BudgetSnapshotResponse]
-    func createSnapshot(payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse
+    func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse
     func updateSnapshot(snapshotId: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse
     func deleteSnapshot(snapshotId: String) async throws
     func getSnapshotItems(snapshotId: String) async throws -> [BudgetPlanItemResponse]
@@ -18,7 +18,7 @@ protocol ExpensesServicing {
     
     // Expenses
     func getExpenses(from: String?, to: String?) async throws -> [ExpenseResponse]
-    func createExpense(payload: ExpenseRequest) async throws -> ExpenseResponse
+    func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse
     func deleteExpense(expenseId: String) async throws
     
@@ -43,8 +43,8 @@ struct ExpensesHTTPService: ExpensesServicing {
         try await client.getSnapshots(year: year, month: month)
     }
 
-    func createSnapshot(payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
-        try await client.createSnapshot(payload: payload)
+    func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
+        try await client.createBudgetSnapshot(request: request)
     }
 
     func updateSnapshot(snapshotId: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
@@ -79,8 +79,8 @@ struct ExpensesHTTPService: ExpensesServicing {
         try await client.getExpenses(from: from, to: to)
     }
 
-    func createExpense(payload: ExpenseRequest) async throws -> ExpenseResponse {
-        try await client.createExpense(payload: payload)
+    func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse {
+        try await client.createExpense(request: request)
     }
 
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse {
@@ -102,7 +102,7 @@ struct ExpensesHTTPService: ExpensesServicing {
 
 struct ExpensesServiceStub: ExpensesServicing {
     func getSnapshots(year: Int? = nil, month: Int? = nil) async throws -> [BudgetSnapshotResponse] { [] }
-    func createSnapshot(payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse { fatalError("Stub not implemented") }
+    func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse { fatalError("Stub not implemented") }
     func updateSnapshot(snapshotId: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse { fatalError("Stub not implemented") }
     func deleteSnapshot(snapshotId: String) async throws {}
     func getSnapshotItems(snapshotId: String) async throws -> [BudgetPlanItemResponse] { [] }
@@ -113,7 +113,7 @@ struct ExpensesServiceStub: ExpensesServicing {
     func deletePlanItem(itemId: String) async throws {}
     
     func getExpenses(from: String? = nil, to: String? = nil) async throws -> [ExpenseResponse] { [] }
-    func createExpense(payload: ExpenseRequest) async throws -> ExpenseResponse { fatalError("Stub not implemented") }
+    func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse { fatalError("Stub not implemented") }
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse { fatalError("Stub not implemented") }
     func deleteExpense(expenseId: String) async throws {}
     

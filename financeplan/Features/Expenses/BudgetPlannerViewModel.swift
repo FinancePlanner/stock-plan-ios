@@ -70,7 +70,7 @@ final class BudgetPlannerViewModel: ObservableObject {
           if newSnapshots.isEmpty {
               let start = calendar.startOfMonth(for: .now)
               let req = BudgetSnapshotRequest(monthStart: dateFormatter.string(from: start), netSalary: 2700, targetShares: [:])
-              let created = try await expensesService.createSnapshot(payload: req)
+              let created = try await expensesService.createBudgetSnapshot(request: req)
               if let id = UUID(uuidString: created.id) {
                   newSnapshots.append(MonthlyBudgetSnapshot(id: id, monthStart: start, netSalary: created.netSalary, items: []))
               }
@@ -271,7 +271,7 @@ final class BudgetPlannerViewModel: ObservableObject {
             for (k,v) in template.targetShares { stringShares[k.rawValue] = v }
             
             let req = BudgetSnapshotRequest(monthStart: dateFormatter.string(from: nextMonthStart), netSalary: template.netSalary, targetShares: stringShares)
-            let createdSnap = try await expensesService.createSnapshot(payload: req)
+            let createdSnap = try await expensesService.createBudgetSnapshot(request: req)
             
             for item in template.items {
                 let itemReq = BudgetPlanItemRequest(snapshotId: createdSnap.id, title: item.title, plannedAmount: item.plannedAmount, pillar: item.pillar)
@@ -441,7 +441,7 @@ final class BudgetPlannerViewModel: ObservableObject {
                 occurredOn: dateFormatter.string(from: draft.occurredOn),
                 linkedPlanItemId: draft.linkedPlanItemID?.uuidString
             )
-            _ = try await expensesService.createExpense(payload: req)
+            _ = try await expensesService.createExpense(request: req)
             await load()
         } catch {
             self.errorMessage = error.localizedDescription

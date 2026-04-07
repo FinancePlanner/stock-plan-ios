@@ -49,8 +49,8 @@ struct ExpensesHTTPClient {
         try await call(GetSnapshotsEndpoint(year: year, month: month))
     }
 
-    func createSnapshot(payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
-        try await call(CreateSnapshotEndpoint(payload: payload))
+    func createBudgetSnapshot(request: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
+        try await call(CreateSnapshotEndpoint(payload: request))
     }
 
     func updateSnapshot(snapshotId: String, payload: BudgetSnapshotRequest) async throws -> BudgetSnapshotResponse {
@@ -89,8 +89,8 @@ struct ExpensesHTTPClient {
         try await call(GetExpensesEndpoint(from: from, to: to))
     }
 
-    func createExpense(payload: ExpenseRequest) async throws -> ExpenseResponse {
-        try await call(CreateExpenseEndpoint(payload: payload))
+    func createExpense(request: ExpenseRequest) async throws -> ExpenseResponse {
+        try await call(CreateExpenseEndpoint(payload: request))
     }
 
     func updateExpense(expenseId: String, payload: ExpenseRequest) async throws -> ExpenseResponse {

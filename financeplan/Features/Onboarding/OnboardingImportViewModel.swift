@@ -9,6 +9,7 @@ final class OnboardingImportViewModel: ObservableObject {
     case csv
     case manual
     case api
+    case expenseBudgetSetup
     case success
     case done
   }
@@ -17,6 +18,10 @@ final class OnboardingImportViewModel: ObservableObject {
 
   func startStockImport() {
     step = .chooseStockMethod
+  }
+  
+  func startExpenseImport() {
+    step = .expenseBudgetSetup
   }
 
   func selectStockMethod(_ method: StockImportMethod) {
