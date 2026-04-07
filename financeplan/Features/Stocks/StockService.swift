@@ -77,7 +77,8 @@ final class StockService: StockServicing {
         shares: stock.shares,
         buyPrice: stock.buyPrice,
         buyDate: stock.buyDate,
-        notes: stock.notes
+        notes: stock.notes,
+        category: stock.category
       )
       return try await client.call(endpoint)
     }
@@ -132,7 +133,8 @@ final class StockService: StockServicing {
         shares: stock.shares,
         buyPrice: stock.buyPrice,
         buyDate: stock.buyDate,
-        notes: stock.notes ?? ""
+        notes: stock.notes ?? "",
+        category: stock.category
       )
       let endpoint = UpdateStockEndpoint(stockId: stock.id, payload: request)
       return try await client.call(endpoint)

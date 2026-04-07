@@ -6,6 +6,27 @@ import SwiftUI
 import StockPlanShared
 import Factory
 
+@MainActor
+final class ActivityViewModel: ObservableObject {
+    @Published var activities: [UserActivityResponse] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    @Injected(\.activityService) private var activityService
+    
+    func loadActivities() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            activities = try await activityService.fetchActivities(limit: 5)
+        } catch {
+            print("Failed to load activities: \(error)")
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+}
+
 private enum HomeTab: Hashable {
   case dashboard
   case portfolio
@@ -67,7 +88,7 @@ struct HomeScreen: View {
         }
         .tag(HomeTab.expenses)
 
-      ExpensesComparisonScreen(isSettingsPresented: $isSettingsPresented, viewModel: budgetPlannerViewModel)
+      ExpensesComparisonScreen()
         .tabItem {
           Label("Reports", systemImage: "chart.bar.xaxis")
         }
@@ -91,6 +112,7 @@ private struct DashboardRoot: View {
   @Binding var isSettingsPresented: Bool
   @Environment(\.colorScheme) private var colorScheme
   @StateObject private var searchViewModel = AssetSearchViewModel()
+  @StateObject private var activityViewModel = ActivityViewModel()
   @State private var isProfilePresented = false
   @State private var dashboardData: DashboardResponse?
   
@@ -141,7 +163,7 @@ private struct DashboardRoot: View {
               .transition(.opacity.combined(with: .move(edge: .top)))
           }
 
-          UnifiedActivityFeed()
+          UnifiedActivityFeed(viewModel: activityViewModel)
 
           Button(action: {
               // Action for adding entry
@@ -181,6 +203,9 @@ private struct DashboardRoot: View {
           } catch {
               // Handle error
           }
+      }
+      .task {
+          await activityViewModel.loadActivities()
       }
       .toolbar {
         ToolbarItemGroup(placement: .topBarTrailing) {
@@ -535,12 +560,7 @@ struct ActivityFeedItem: Identifiable {
 }
 
 private struct UnifiedActivityFeed: View {
-    let activities: [ActivityFeedItem] = [
-        ActivityFeedItem(title: "AAPL", subtitle: "Stock Growth", amount: 175.30, isGrowth: true, symbol: "arrow.up.right", time: "Today, 10:15 AM"),
-        ActivityFeedItem(title: "Starbucks Coffee", subtitle: "Groceries & Dining", amount: -5.90, isGrowth: false, symbol: "bag.fill", time: "Today, 9:30 AM"),
-        ActivityFeedItem(title: "GOOGL", subtitle: "Dividend", amount: 42.50, isGrowth: true, symbol: "arrow.up.right", time: "Today, 9:00 AM"),
-        ActivityFeedItem(title: "Electric Bill", subtitle: "Utilities", amount: -120.00, isGrowth: false, symbol: "lightbulb.fill", time: "Today, 8:45 AM")
-    ]
+    @ObservedObject var viewModel: ActivityViewModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -550,41 +570,53 @@ private struct UnifiedActivityFeed: View {
                 
             GlassCard(cornerRadius: 22) {
                 VStack(spacing: 0) {
-                    ForEach(activities) { activity in
-                        HStack(spacing: 16) {
-                            Circle()
-                                .fill(activity.isGrowth ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
-                                .frame(width: 44, height: 44)
-                                .overlay(
-                                    Image(systemName: activity.symbol)
-                                        .foregroundStyle(activity.isGrowth ? .green : .red)
-                                        .font(.title3)
-                                )
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(activity.title)
-                                    .font(.headline)
-                                Text(activity.subtitle)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                    if viewModel.isLoading && viewModel.activities.isEmpty {
+                        ProgressView()
+                            .padding()
+                    } else if viewModel.activities.isEmpty {
+                        Text("No recent activity")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding()
+                    } else {
+                        ForEach(viewModel.activities) { activity in
+                            HStack(spacing: 16) {
+                                Circle()
+                                    .fill(activity.isGrowth ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
+                                    .frame(width: 44, height: 44)
+                                    .overlay(
+                                        Image(systemName: activity.symbol)
+                                            .foregroundStyle(activity.isGrowth ? .green : .red)
+                                            .font(.title3)
+                                    )
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(activity.title)
+                                        .font(.headline)
+                                    Text(activity.subtitle)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                VStack(alignment: .trailing, spacing: 4) {
+                                    if let amount = activity.amount {
+                                        Text(amount > 0 ? "+\(amount.currency)" : "-\(abs(amount).currency)")
+                                            .font(.headline)
+                                            .foregroundStyle(activity.isGrowth ? .green : .red)
+                                    }
+                                    Text(activity.createdAt.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
+                            .padding(.vertical, 12)
                             
-                            Spacer()
-                            
-                            VStack(alignment: .trailing, spacing: 4) {
-                                Text(activity.amount > 0 ? "+\(activity.amount.currency)" : "-\(abs(activity.amount).currency)")
-                                    .font(.headline)
-                                    .foregroundStyle(activity.isGrowth ? .green : .red)
-                                Text(activity.time)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                            if activity.id != viewModel.activities.last?.id {
+                                Divider()
+                                    .padding(.leading, 60)
                             }
-                        }
-                        .padding(.vertical, 12)
-                        
-                        if activity.id != activities.last?.id {
-                            Divider()
-                                .padding(.leading, 60)
                         }
                     }
                 }

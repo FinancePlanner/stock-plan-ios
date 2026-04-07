@@ -54,8 +54,9 @@ struct PortfolioScreen: View {
   private var filteredStocks: [SDPortfolioStock] {
       switch selectedAssetFilter {
       case .all: return stocks
-      case .stocks: return stocks // Assuming all current are stocks for now
-      case .etfs, .crypto: return []
+      case .stocks: return stocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.stock.rawValue }
+      case .etfs: return stocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.etf.rawValue }
+      case .crypto: return stocks.filter { ($0.category ?? AssetCategory.stock.rawValue) == AssetCategory.crypto.rawValue }
       }
   }
 

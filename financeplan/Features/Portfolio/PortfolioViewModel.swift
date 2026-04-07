@@ -163,8 +163,8 @@ final class PortfolioViewModel: ObservableObject {
           shares: shares,
           buyPrice: buyPrice,
           buyDate: DateFormatter.yyyyMMdd.string(from: draft.buyDate),
-
-          notes: draft.notes.isEmpty ? nil : draft.notes
+          notes: draft.notes.isEmpty ? nil : draft.notes,
+          category: draft.category
         )
       )
 
